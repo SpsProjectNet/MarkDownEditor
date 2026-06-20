@@ -40,8 +40,8 @@ let pendingOpenFilePath = null;
 // Update notification settings.
 // UPDATE_INFO_URL must return JSON like: { "version": "1.0.1", "url": "<download page>" }
 // DOWNLOAD_PAGE_URL is opened in the browser when the user chooses to download.
-const UPDATE_INFO_URL = 'https://spsprojectnet.github.io/markdowneditor/latest.json';
-const DOWNLOAD_PAGE_URL = 'https://github.com/SpsProjectNet/markdowneditor/releases';
+const UPDATE_INFO_URL = 'https://spsprojectnet.github.io/MarkDownEditor/latest.json';
+const DOWNLOAD_PAGE_URL = 'https://github.com/SpsProjectNet/MarkDownEditor/releases';
 
 // Download page for the most recent detected update (set when one is found).
 let updateDownloadUrl = DOWNLOAD_PAGE_URL;
