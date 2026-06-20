@@ -65,5 +65,8 @@
   "dialog.button.cancel": "Cancel",
   "dialog.updates.title": "Updates",
   "dialog.updates.upToDate": "You are using the latest version ({version}).",
-  "dialog.updates.error": "Could not check for updates."
+  "dialog.updates.error": "Could not check for updates.",
+  "dialog.open.title": "Open Markdown file",
+  "dialog.export.title": "Export to PDF",
+  "dialog.media.title": "Select media"
 }

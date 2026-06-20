@@ -18,6 +18,37 @@ const helpToggle = document.getElementById('helpToggle');
 const helpDropdown = document.getElementById('helpDropdown');
 const iconButton = document.getElementById('iconBtn');
 const emojiPicker = document.getElementById('emojiPicker');
+const languageList = document.getElementById('languageList');
+
+// Translation strings for the active locale, loaded from the main process.
+let i18nStrings = {};
+
+// Last detected update info, kept so its menu label can be re-translated.
+let pendingUpdateInfo = null;
+
+// Translate a key, replacing {placeholders} with the given params.
+function t(key, params) {
+  let text = i18nStrings[key] != null ? i18nStrings[key] : key;
+  if (params) {
+    Object.keys(params).forEach((name) => {
+      text = text.split('{' + name + '}').join(params[name]);
+    });
+  }
+  return text;
+}
+
+// Apply the loaded strings to every element carrying a data-i18n* attribute.
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((element) => {
+    element.title = t(element.dataset.i18nTitle);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
+    element.placeholder = t(element.dataset.i18nPlaceholder);
+  });
+}
 
 // Converts the edited preview HTML back into Markdown.
 const turndownService = new TurndownService({
@@ -73,7 +104,7 @@ function renderTabBar() {
     const closeElement = document.createElement('span');
     closeElement.className = 'tab-close';
     closeElement.textContent = '×';
-    closeElement.title = 'Close tab';
+    closeElement.title = t('tab.close');
     closeElement.addEventListener('click', (event) => {
       event.stopPropagation();
       closeTab(index);
@@ -91,10 +122,12 @@ function refreshActiveView() {
 
   if (tab) {
     editor.value = tab.content;
-    statusLabel.textContent = (tab.isModified ? 'Modified: ' : 'Open: ') + tab.filePath;
+    statusLabel.textContent = tab.isModified
+      ? t('status.modified', { path: tab.filePath })
+      : t('status.open', { path: tab.filePath });
   } else {
     editor.value = '';
-    statusLabel.textContent = 'No file open';
+    statusLabel.textContent = t('status.noFile');
   }
 
   renderPreview();
@@ -136,7 +169,7 @@ async function closeTab(index) {
     if (choice === 'save') {
       const result = await window.api.saveFile(tab.filePath, tab.content);
       if (result.error) {
-        statusLabel.textContent = 'Save error: ' + result.error;
+        statusLabel.textContent = t('status.saveError', { msg: result.error });
         return;
       }
     }
@@ -389,10 +422,11 @@ helpDropdown.addEventListener('click', (event) => {
 
 // Reveal the "Update" menu item only when a newer version is available.
 window.api.onUpdateAvailable((info) => {
+  pendingUpdateInfo = info;
   const updateItem = helpDropdown.querySelector('button[data-help="update"]');
   if (updateItem) {
     updateItem.hidden = false;
-    updateItem.textContent = 'Aggiornamento (' + info.version + ')';
+    updateItem.textContent = t('menu.updateWithVersion', { version: info.version });
   }
 });
 
@@ -490,19 +524,19 @@ openButton.addEventListener('click', async () => {
 saveButton.addEventListener('click', async () => {
   const tab = getActiveTab();
   if (!tab) {
-    statusLabel.textContent = 'No file to save';
+    statusLabel.textContent = t('status.noFileToSave');
     return;
   }
 
   const result = await window.api.saveFile(tab.filePath, tab.content);
   if (result.error) {
-    statusLabel.textContent = 'Save error: ' + result.error;
+    statusLabel.textContent = t('status.saveError', { msg: result.error });
     return;
   }
 
   tab.isModified = false;
   renderTabBar();
-  statusLabel.textContent = 'Saved: ' + tab.filePath;
+  statusLabel.textContent = t('status.saved', { path: tab.filePath });
   scheduleSessionSave();
 });
 
@@ -510,17 +544,17 @@ saveButton.addEventListener('click', async () => {
 revertButton.addEventListener('click', async () => {
   const tab = getActiveTab();
   if (!tab) {
-    statusLabel.textContent = 'No file to revert';
+    statusLabel.textContent = t('status.noFileToRevert');
     return;
   }
   if (!tab.isModified) {
-    statusLabel.textContent = 'No changes to revert';
+    statusLabel.textContent = t('status.noChangesToRevert');
     return;
   }
 
   const result = await window.api.readFile(tab.filePath);
   if (result.error) {
-    statusLabel.textContent = 'Revert error: ' + result.error;
+    statusLabel.textContent = t('status.revertError', { msg: result.error });
     return;
   }
 
@@ -528,7 +562,7 @@ revertButton.addEventListener('click', async () => {
   tab.isModified = false;
   refreshActiveView();
   renderTabBar();
-  statusLabel.textContent = 'Reverted: ' + tab.filePath;
+  statusLabel.textContent = t('status.reverted', { path: tab.filePath });
   scheduleSessionSave();
 });
 
@@ -541,7 +575,7 @@ printButton.addEventListener('click', () => {
 exportButton.addEventListener('click', async () => {
   const tab = getActiveTab();
   if (!tab) {
-    statusLabel.textContent = 'No file to export';
+    statusLabel.textContent = t('status.noFileToExport');
     return;
   }
 
@@ -552,9 +586,9 @@ exportButton.addEventListener('click', async () => {
   if (result.canceled) return;
 
   if (result.error) {
-    statusLabel.textContent = 'Export error: ' + result.error;
+    statusLabel.textContent = t('status.exportError', { msg: result.error });
   } else {
-    statusLabel.textContent = 'Exported: ' + result.filePath;
+    statusLabel.textContent = t('status.exported', { path: result.filePath });
   }
 });
 
@@ -576,7 +610,7 @@ window.api.onAppCloseRequest(async () => {
     if (choice === 'save') {
       const result = await window.api.saveFile(tab.filePath, tab.content);
       if (result.error) {
-        statusLabel.textContent = 'Save error: ' + result.error;
+        statusLabel.textContent = t('status.saveError', { msg: result.error });
         return; // keep the window open on save failure
       }
     }
@@ -591,14 +625,61 @@ window.api.onOpenExternalFile((file) => {
   openTab(file.filePath, file.content);
 });
 
+// Supported locales, kept to rebuild the language menu after a change.
+let availableLocales = [];
+
+// Build the language list in the help menu, marking the active language.
+function buildLanguageMenu(locales, activeLocale) {
+  availableLocales = locales;
+  languageList.innerHTML = '';
+
+  locales.forEach((locale) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = locale.name;
+    button.className = locale.code === activeLocale ? 'active' : '';
+    button.addEventListener('click', () => changeLanguage(locale.code));
+    languageList.appendChild(button);
+  });
+}
+
+// Switch the application language and re-apply every translated string.
+async function changeLanguage(locale) {
+  const data = await window.api.i18nSet(locale);
+  i18nStrings = data.strings;
+
+  applyTranslations();
+  buildLanguageMenu(availableLocales, data.locale);
+  refreshActiveView();
+
+  // Re-translate the update menu item if it is currently shown.
+  if (pendingUpdateInfo) {
+    const updateItem = helpDropdown.querySelector('button[data-help="update"]');
+    if (updateItem && !updateItem.hidden) {
+      updateItem.textContent = t('menu.updateWithVersion', { version: pendingUpdateInfo.version });
+    }
+  }
+
+  helpDropdown.classList.add('hidden');
+}
+
 // Show the application version in the status bar and the window title.
 window.api.getVersion().then((version) => {
   versionLabel.textContent = 'v' + version;
   document.title = 'Markdown Editor ' + version;
 });
 
-// Restore the previous session, then open a file passed by the OS at launch.
-restoreSession().then(async () => {
+// Load translations first, then restore the session and any OS-launched file.
+async function start() {
+  const data = await window.api.i18nGet();
+  i18nStrings = data.strings;
+  applyTranslations();
+  buildLanguageMenu(data.locales, data.locale);
+
+  await restoreSession();
+
   const launchFile = await window.api.getLaunchFile();
   if (launchFile) openTab(launchFile.filePath, launchFile.content);
-});
+}
+
+start();

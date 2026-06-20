@@ -3,6 +3,7 @@ node_modules/
 
 # electron-builder output
 dist/
+out/
 
 # Logs
 npm-debug.log*

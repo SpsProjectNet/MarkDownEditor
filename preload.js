@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('api', {
   confirmClose: () => ipcRenderer.invoke('confirm-close'),
   onAppCloseRequest: (callback) =>
     ipcRenderer.on('app-close-request', () => callback()),
+  i18nGet: () => ipcRenderer.invoke('i18n-get'),
+  i18nSet: (locale) => ipcRenderer.invoke('i18n-set', locale),
   loadSession: () => ipcRenderer.invoke('load-session'),
   saveSession: (session) => ipcRenderer.invoke('save-session', session)
 });

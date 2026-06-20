@@ -43,8 +43,10 @@
       "main.js",
       "preload.js",
       "renderer.js",
+      "i18n.js",
       "index.html",
       "style.css",
+      "locales/**",
       "node_modules/marked/**",
       "node_modules/turndown/**"
     ],

@@ -1,11 +1,34 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const i18n = require('./i18n');
 
 // Application icon, loaded once and reused for the window/title bar.
 const appIcon = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
 
 let mainWindow;
+
+// Path of the JSON file storing user settings (currently the chosen language).
+const settingsFilePath = path.join(app.getPath('userData'), 'settings.json');
+
+// Read the saved locale, or null when none has been chosen yet.
+function loadSavedLocale() {
+  try {
+    const data = JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8'));
+    return data.locale || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Persist the chosen locale.
+function saveLocale(locale) {
+  try {
+    fs.writeFileSync(settingsFilePath, JSON.stringify({ locale }, null, 2), 'utf-8');
+  } catch (error) {
+    // Ignore write errors.
+  }
+}
 
 // Set to true once the user has confirmed closing the window (unsaved changes
 // have been handled), so the close event is allowed to proceed.
@@ -17,8 +40,8 @@ let pendingOpenFilePath = null;
 // Update notification settings.
 // UPDATE_INFO_URL must return JSON like: { "version": "1.0.1", "url": "<download page>" }
 // DOWNLOAD_PAGE_URL is opened in the browser when the user chooses to download.
-const UPDATE_INFO_URL = 'https://USER.gitlab.io/REPO/latest.json';
-const DOWNLOAD_PAGE_URL = 'https://gitlab.com/USER/REPO/-/releases';
+const UPDATE_INFO_URL = 'https://spsprojectnet.github.io/markdowneditor/latest.json';
+const DOWNLOAD_PAGE_URL = 'https://github.com/SpsProjectNet/markdowneditor/releases';
 
 // Download page for the most recent detected update (set when one is found).
 let updateDownloadUrl = DOWNLOAD_PAGE_URL;
@@ -101,6 +124,9 @@ app.whenReady().then(() => {
   // Ensure Windows uses the app icon (and groups it) in the taskbar.
   app.setAppUserModelId('net.spsproject.markdowneditor');
 
+  // Initialise the language: saved choice, otherwise the system locale.
+  i18n.setLocale(loadSavedLocale() || i18n.normalizeLocale(app.getLocale()));
+
   // Remove the native "File Edit View" application menu bar.
   Menu.setApplicationMenu(null);
 
@@ -163,17 +189,17 @@ async function checkForUpdate(isManual) {
     } else if (isManual) {
       await dialog.showMessageBox(mainWindow, {
         type: 'info',
-        title: 'Updates',
+        title: i18n.t('dialog.updates.title'),
         message: 'Markdown Editor',
-        detail: 'You are using the latest version (' + app.getVersion() + ').'
+        detail: i18n.t('dialog.updates.upToDate', { version: app.getVersion() })
       });
     }
   } catch (error) {
     if (isManual) {
       await dialog.showMessageBox(mainWindow, {
         type: 'error',
-        title: 'Updates',
-        message: 'Could not check for updates.',
+        title: i18n.t('dialog.updates.title'),
+        message: i18n.t('dialog.updates.error'),
         detail: String(error && error.message ? error.message : error)
       });
     }
@@ -188,7 +214,7 @@ app.on('window-all-closed', () => {
 // path and content of every chosen file as an array of objects.
 ipcMain.handle('open-file', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    title: 'Open Markdown file',
+    title: i18n.t('dialog.open.title'),
     filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }],
     properties: ['openFile', 'multiSelections']
   });
@@ -231,7 +257,7 @@ ipcMain.handle('print', async () => {
 // printToPDF renders with the print stylesheet, so only the preview is included.
 ipcMain.handle('export-pdf', async (event, suggestedName) => {
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-    title: 'Export to PDF',
+    title: i18n.t('dialog.export.title'),
     defaultPath: suggestedName || 'document.pdf',
     filters: [{ name: 'PDF', extensions: ['pdf'] }]
   });
@@ -259,7 +285,7 @@ ipcMain.handle('pick-media', async (event, mediaType) => {
   };
 
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    title: 'Select media',
+    title: i18n.t('dialog.media.title'),
     filters: filtersByType[mediaType] || [],
     properties: ['openFile']
   });
@@ -272,9 +298,9 @@ ipcMain.handle('pick-media', async (event, mediaType) => {
 ipcMain.handle('show-about', async () => {
   await dialog.showMessageBox(mainWindow, {
     type: 'info',
-    title: 'About',
+    title: i18n.t('dialog.about.title'),
     message: 'Markdown Editor',
-    detail: 'Version ' + app.getVersion() + '\nA minimal Markdown editor built with Electron.'
+    detail: i18n.t('dialog.about.detail', { version: app.getVersion() })
   });
 });
 
@@ -304,10 +330,14 @@ ipcMain.handle('get-launch-file', async () => {
 ipcMain.handle('confirm-save', async (event, fileName) => {
   const { response } = await dialog.showMessageBox(mainWindow, {
     type: 'warning',
-    title: 'Unsaved changes',
-    message: 'Save changes to ' + fileName + '?',
-    detail: 'Your changes will be lost if you do not save them.',
-    buttons: ['Save', "Don't Save", 'Cancel'],
+    title: i18n.t('dialog.unsaved.title'),
+    message: i18n.t('dialog.unsaved.message', { file: fileName }),
+    detail: i18n.t('dialog.unsaved.detail'),
+    buttons: [
+      i18n.t('dialog.button.save'),
+      i18n.t('dialog.button.dontSave'),
+      i18n.t('dialog.button.cancel')
+    ],
     defaultId: 0,
     cancelId: 2
   });
@@ -318,6 +348,20 @@ ipcMain.handle('confirm-save', async (event, fileName) => {
 ipcMain.handle('confirm-close', () => {
   allowClose = true;
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+});
+
+// Return the current locale, the supported locales and the active strings.
+ipcMain.handle('i18n-get', () => ({
+  locale: i18n.getLocale(),
+  locales: i18n.getSupported(),
+  strings: i18n.getStrings()
+}));
+
+// Change the language, persist it, and return the new strings.
+ipcMain.handle('i18n-set', (event, locale) => {
+  const applied = i18n.setLocale(locale);
+  saveLocale(applied);
+  return { locale: applied, strings: i18n.getStrings() };
 });
 
 // Load the previous session, dropping any file that no longer exists on disk.

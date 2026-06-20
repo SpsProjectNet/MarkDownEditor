@@ -262,6 +262,27 @@ body {
   display: none;
 }
 
+/* Separator and section label inside the help menu */
+.help-separator {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 4px 0;
+}
+
+.help-label {
+  padding: 4px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+}
+
+/* Active (current) language is highlighted */
+#languageList button.active {
+  font-weight: 600;
+  color: #2d6cdf;
+}
+
 /* --- Split view --- */
 .split {
   display: flex;

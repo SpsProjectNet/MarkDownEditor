@@ -13,44 +13,47 @@
        Starts collapsed (only the file actions and the "Edit" toggle are shown). -->
   <section id="formatBar" class="format-bar collapsed">
     <div class="format-group file-actions">
-      <button id="openBtn" title="Open file">Open</button>
-      <button id="sourceBtn" title="Toggle source view">Source</button>
-      <button id="saveBtn" title="Save">Save</button>
-      <button id="revertBtn" title="Revert to the saved version">Revert</button>
-      <button id="printBtn" title="Print">Print</button>
-      <button id="exportBtn" title="Export to PDF">PDF</button>
+      <button id="openBtn" data-i18n="open" data-i18n-title="open.title">Open</button>
+      <button id="sourceBtn" data-i18n="source" data-i18n-title="source.title">Source</button>
+      <button id="saveBtn" data-i18n="save" data-i18n-title="save.title">Save</button>
+      <button id="revertBtn" data-i18n="revert" data-i18n-title="revert.title">Revert</button>
+      <button id="printBtn" data-i18n="print" data-i18n-title="print.title">Print</button>
+      <button id="exportBtn" data-i18n-title="pdf.title">PDF</button>
     </div>
 
-    <button id="formatToggle" class="format-toggle" title="Collapse or expand the editing controls">
-      <span class="format-chevron">v</span> Edit
+    <button id="formatToggle" class="format-toggle" data-i18n-title="edit.title">
+      <span class="format-chevron">v</span> <span data-i18n="edit">Edit</span>
     </button>
 
     <div class="format-actions">
-      <button data-command="h1" title="Heading 1">H1</button>
-      <button data-command="h2" title="Heading 2">H2</button>
-      <button data-command="h3" title="Heading 3">H3</button>
-      <button data-command="paragraph" title="Normal text">P</button>
-      <button data-command="bold" title="Bold"><strong>B</strong></button>
-      <button data-command="italic" title="Italic"><em>I</em></button>
-      <button data-command="unorderedList" title="Bulleted list">List</button>
-      <button data-command="orderedList" title="Numbered list">1.</button>
-      <button data-command="quote" title="Quote">Quote</button>
-      <button data-command="code" title="Inline code">Code</button>
-      <button data-command="link" title="Link">Link</button>
-      <button data-media="image" title="Insert image">Image</button>
+      <button data-command="h1" data-i18n-title="h1.title">H1</button>
+      <button data-command="h2" data-i18n-title="h2.title">H2</button>
+      <button data-command="h3" data-i18n-title="h3.title">H3</button>
+      <button data-command="paragraph" data-i18n-title="paragraph.title">P</button>
+      <button data-command="bold" data-i18n-title="bold.title"><strong>B</strong></button>
+      <button data-command="italic" data-i18n-title="italic.title"><em>I</em></button>
+      <button data-command="unorderedList" data-i18n="ul" data-i18n-title="ul.title">List</button>
+      <button data-command="orderedList" data-i18n-title="ol.title">1.</button>
+      <button data-command="quote" data-i18n="quote" data-i18n-title="quote.title">Quote</button>
+      <button data-command="code" data-i18n="code" data-i18n-title="code.title">Code</button>
+      <button data-command="link" data-i18n="link" data-i18n-title="link.title">Link</button>
+      <button data-media="image" data-i18n="image" data-i18n-title="image.title">Image</button>
       <div class="emoji-menu">
-        <button id="iconBtn" title="Insert emoji">Icon</button>
+        <button id="iconBtn" data-i18n="icon" data-i18n-title="icon.title">Icon</button>
         <div id="emojiPicker" class="emoji-picker hidden"></div>
       </div>
-      <button data-media="video" title="Insert video">Video</button>
+      <button data-media="video" data-i18n="video" data-i18n-title="video.title">Video</button>
     </div>
 
     <!-- Help menu, pinned to the right of the controls bar -->
     <div id="helpMenu" class="help-menu">
-      <button id="helpToggle" class="help-toggle" title="Help">?</button>
+      <button id="helpToggle" class="help-toggle" data-i18n-title="help.title">?</button>
       <div id="helpDropdown" class="help-dropdown hidden">
-        <button data-help="update" hidden>Aggiornamento</button>
-        <button data-help="about">Informazioni su</button>
+        <button data-help="update" hidden>Update</button>
+        <button data-help="about" data-i18n="menu.about">About</button>
+        <div class="help-separator"></div>
+        <div class="help-label" data-i18n="menu.language">Language</div>
+        <div id="languageList"></div>
       </div>
     </div>
   </section>
@@ -58,7 +61,7 @@
   <!-- Layout: shows the preview only by default; "Source" turns it into a split view -->
   <main class="split">
     <section class="pane editor-pane">
-      <textarea id="editor" placeholder="Write your Markdown here..."></textarea>
+      <textarea id="editor" data-i18n-placeholder="editor.placeholder" placeholder="Write your Markdown here..."></textarea>
     </section>
     <section class="pane preview-pane">
       <div id="preview" contenteditable="true" spellcheck="false"></div>
