@@ -1,0 +1,62 @@
+# Deploy the download page and latest.json to GitHub Pages.
+#
+# Runs on:
+#   - pushes to main (so the download page updates as soon as it changes);
+#   - version tags v* (so latest.json updates on every release);
+#   - manual dispatch.
+#
+# latest.json feeds the in-app update check (UPDATE_INFO_URL in main.js).
+# The download page (docs/index.html) is static and reads the GitHub Releases
+# API at runtime, so it always points at the newest installers.
+
+name: Deploy Pages
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p public
+          cp docs/index.html public/index.html
+          # Version for latest.json: the pushed tag, or the latest published release.
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq '.tagName' 2>/dev/null | sed 's/^v//')"
+          fi
+          echo "{\"version\":\"${VERSION}\",\"url\":\"https://github.com/${GITHUB_REPOSITORY}/releases/latest\"}" > public/latest.json
+          echo "Generated latest.json:"; cat public/latest.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

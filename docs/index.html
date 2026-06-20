@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Markdown Editor</title>
+  <meta name="description" content="Download Markdown Editor — a minimal, fast Markdown editor for Windows, macOS and Linux.">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #171a23;
+      --border: #262b38;
+      --text: #e6e8ee;
+      --muted: #8b92a6;
+      --accent: #4f8cff;
+      --accent-hover: #3b78f0;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f5f6f9; --card: #ffffff; --border: #e2e5ec;
+        --text: #1a1d27; --muted: #6b7384; --accent: #2f6bff; --accent-hover: #1f5af0;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 48px 20px;
+    }
+    .wrap { width: 100%; max-width: 640px; }
+    header { text-align: center; margin-bottom: 36px; }
+    h1 { font-size: 2rem; margin: 0 0 8px; }
+    .tagline { color: var(--muted); margin: 0; }
+    .version { display: inline-block; margin-top: 14px; font-size: .85rem; color: var(--muted);
+      border: 1px solid var(--border); border-radius: 999px; padding: 3px 12px; }
+    .primary-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px; text-align: center; margin-bottom: 24px;
+    }
+    .detected { color: var(--muted); font-size: .9rem; margin: 0 0 16px; }
+    .detected strong { color: var(--text); }
+    .btn {
+      display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
+      font-size: 1.05rem; font-weight: 600; padding: 14px 32px; border-radius: 12px;
+      transition: background .15s ease; border: none; cursor: pointer;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+    .sub { display: block; margin-top: 10px; font-size: .82rem; color: var(--muted); }
+    h2 { font-size: 1rem; color: var(--muted); font-weight: 600; text-transform: uppercase;
+      letter-spacing: .04em; margin: 28px 0 12px; }
+    .os-group { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 6px 18px; margin-bottom: 14px; }
+    .os-group h3 { font-size: .95rem; margin: 14px 0 8px; }
+    .asset { display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 0; border-top: 1px solid var(--border); font-size: .9rem; }
+    .os-group h3 + .asset { border-top: none; }
+    .asset a { color: var(--accent); text-decoration: none; }
+    .asset a:hover { text-decoration: underline; }
+    .asset .size { color: var(--muted); font-size: .8rem; }
+    footer { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 32px; }
+    footer a { color: var(--accent); text-decoration: none; }
+    .note { color: var(--muted); font-size: .82rem; line-height: 1.5; margin-top: 18px; }
+    .loading, .error { text-align: center; color: var(--muted); padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Markdown Editor</h1>
+      <p class="tagline">A minimal, fast Markdown editor for Windows, macOS &amp; Linux.</p>
+      <span class="version" id="version">Loading latest release…</span>
+    </header>
+
+    <div class="primary-card">
+      <p class="detected" id="detected">Detecting your system…</p>
+      <a class="btn" id="primaryBtn" href="#" aria-disabled="true">Download</a>
+      <span class="sub" id="primarySub"></span>
+    </div>
+
+    <div id="allAssets"></div>
+
+    <p class="note" id="warningNote" hidden>
+      The installers are not code-signed yet, so your system may show a security
+      warning on first launch — this does not mean the file is unsafe.
+      On Windows choose “More info → Run anyway”; on macOS right-click the app → Open.
+    </p>
+
+    <footer>
+      <p>
+        <a href="https://github.com/SpsProjectNet/MarkDownEditor/releases" id="allReleases">All releases</a>
+        &nbsp;·&nbsp;
+        <a href="https://github.com/SpsProjectNet/MarkDownEditor">Source code</a>
+      </p>
+      <p>Made by <a href="https://spsproject.net">SpsProject.net</a></p>
+    </footer>
+  </div>
+
+  <script>
+    const REPO = "SpsProjectNet/MarkDownEditor";
+    const API = "https://api.github.com/repos/" + REPO + "/releases/latest";
+
+    // Detect operating system and (when possible) CPU architecture.
+    async function detectSystem() {
+      let os = "unknown", arch = null;
+      const uad = navigator.userAgentData;
+      if (uad && uad.platform) {
+        const p = uad.platform.toLowerCase();
+        if (p.includes("win")) os = "windows";
+        else if (p.includes("mac")) os = "macos";
+        else if (p.includes("linux") || p.includes("chrome")) os = "linux";
+        try {
+          const hev = await uad.getHighEntropyValues(["architecture"]);
+          arch = hev.architecture; // "x86" | "arm"
+        } catch (e) { /* not available */ }
+      }
+      if (os === "unknown") {
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes("windows")) os = "windows";
+        else if (ua.includes("mac")) os = "macos";
+        else if (ua.includes("linux") || ua.includes("android")) os = "linux";
+      }
+      return { os, arch };
+    }
+
+    const OS_LABEL = { windows: "Windows", macos: "macOS", linux: "Linux" };
+
+    function humanSize(bytes) {
+      if (!bytes) return "";
+      const mb = bytes / 1024 / 1024;
+      return mb >= 1 ? mb.toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
+    }
+
+    // Classify an asset by OS based on its file extension.
+    function assetOS(name) {
+      const n = name.toLowerCase();
+      if (n.endsWith(".exe")) return "windows";
+      if (n.endsWith(".dmg")) return "macos";
+      if (n.endsWith(".appimage") || n.endsWith(".deb")) return "linux";
+      return null;
+    }
+
+    // Pick the best single asset for the detected system.
+    function pickPrimary(assets, sys) {
+      const forOS = assets.filter(a => assetOS(a.name) === sys.os);
+      if (!forOS.length) return null;
+      if (sys.os === "macos") {
+        const arm = forOS.find(a => /arm64/i.test(a.name));
+        const intel = forOS.find(a => !/arm64/i.test(a.name));
+        if (sys.arch === "arm") return arm || intel || forOS[0];
+        if (sys.arch === "x86") return intel || arm || forOS[0];
+        return arm || forOS[0]; // unknown arch: default to Apple Silicon
+      }
+      if (sys.os === "linux") {
+        // Prefer x64 AppImage (name without arch suffix).
+        const x64App = forOS.find(a => /\.appimage$/i.test(a.name) && !/arm64|armv7l/i.test(a.name));
+        return x64App || forOS.find(a => /\.appimage$/i.test(a.name)) || forOS[0];
+      }
+      return forOS[0]; // windows: the single .exe
+    }
+
+    (async function init() {
+      const sys = await detectSystem();
+      const detectedEl = document.getElementById("detected");
+      const btn = document.getElementById("primaryBtn");
+      const sub = document.getElementById("primarySub");
+
+      let data;
+      try {
+        const res = await fetch(API, { headers: { "Accept": "application/vnd.github+json" } });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        data = await res.json();
+      } catch (e) {
+        detectedEl.innerHTML = "Couldn't load the latest release.";
+        sub.innerHTML = '<a href="https://github.com/' + REPO + '/releases/latest">Open the releases page</a>';
+        document.getElementById("version").textContent = "";
+        return;
+      }
+
+      document.getElementById("version").textContent = "Latest: " + (data.name || data.tag_name);
+      document.getElementById("warningNote").hidden = false;
+
+      const assets = (data.assets || []).filter(a => assetOS(a.name) && !a.name.endsWith(".blockmap"));
+
+      // Primary button.
+      if (sys.os !== "unknown") {
+        const primary = pickPrimary(assets, sys);
+        if (primary) {
+          detectedEl.innerHTML = "We detected <strong>" + OS_LABEL[sys.os] + "</strong>";
+          btn.textContent = "Download for " + OS_LABEL[sys.os];
+          btn.href = primary.browser_download_url;
+          btn.setAttribute("aria-disabled", "false");
+          sub.textContent = primary.name + " · " + humanSize(primary.size);
+        } else {
+          detectedEl.innerHTML = "No build found for <strong>" + OS_LABEL[sys.os] + "</strong>";
+          btn.textContent = "See all downloads below";
+          btn.href = "#allAssets";
+          btn.setAttribute("aria-disabled", "false");
+        }
+      } else {
+        detectedEl.textContent = "Choose your platform below:";
+        btn.hidden = true;
+      }
+
+      // Full list grouped by OS.
+      const container = document.getElementById("allAssets");
+      const heading = document.createElement("h2");
+      heading.textContent = "All platforms";
+      container.appendChild(heading);
+
+      ["windows", "macos", "linux"].forEach(os => {
+        const group = assets.filter(a => assetOS(a.name) === os);
+        if (!group.length) return;
+        const box = document.createElement("div");
+        box.className = "os-group";
+        const h3 = document.createElement("h3");
+        h3.textContent = OS_LABEL[os];
+        box.appendChild(h3);
+        group.forEach(a => {
+          const row = document.createElement("div");
+          row.className = "asset";
+          row.innerHTML =
+            '<a href="' + a.browser_download_url + '">' + a.name + "</a>" +
+            '<span class="size">' + humanSize(a.size) + "</span>";
+          box.appendChild(row);
+        });
+        container.appendChild(box);
+      });
+    })();
+  </script>
+</body>
+</html>

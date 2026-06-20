@@ -3,14 +3,13 @@
 # Trigger: pushing a version tag (e.g. v0.0.2) or running it manually.
 # Result:
 #   - one build job per OS produces the native installers;
-#   - the "release" job attaches every installer to a GitHub Release;
-#   - the "pages" job publishes latest.json to GitHub Pages so the in-app
-#     update notification (UPDATE_INFO_URL in main.js) can detect new versions.
+#   - the "release" job attaches every installer to a GitHub Release.
+#
+# The download page and latest.json are deployed separately by pages.yml.
 #
 # Notes:
 #   - macOS builds are not code-signed (no Apple certificate); the .dmg works
 #     but Gatekeeper shows a warning on first launch.
-#   - Enable Pages once under Settings -> Pages -> Source: "GitHub Actions".
 
 name: Build and Release
 
@@ -22,8 +21,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -77,24 +74,3 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: artifacts/**/*
-
-  pages:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    environment:
-      name: github-pages
-    steps:
-      - name: Generate latest.json
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          mkdir -p public
-          echo "{\"version\":\"$VERSION\",\"url\":\"https://github.com/${GITHUB_REPOSITORY}/releases/latest\"}" > public/latest.json
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: public
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v5
