@@ -1,9 +1,14 @@
 # Deploy the download page and latest.json to GitHub Pages.
 #
 # Runs on:
-#   - pushes to main (so the download page updates as soon as it changes);
-#   - version tags v* (so latest.json updates on every release);
-#   - manual dispatch.
+#   - version tags v* (so latest.json updates on every release, using the tag
+#     name as the version — no race with the release being published);
+#   - manual dispatch (to republish the download page after editing
+#     docs/index.html on main; latest.json is taken from the latest release).
+#
+# Triggering on main was removed on purpose: pushing the version bump and the
+# tag together caused two competing runs, and the main one (reading the
+# previous release) could overwrite latest.json with the old version.
 #
 # latest.json feeds the in-app update check (UPDATE_INFO_URL in main.js).
 # The download page (docs/index.html) is static and reads the GitHub Releases
@@ -13,8 +18,6 @@ name: Deploy Pages
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
