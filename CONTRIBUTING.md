@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to **Markdown Editor**! 🎉
+Thanks for your interest in contributing to **Markdown Editor**!
 
 To keep the project stable, **no change is applied directly to the `main` branch**: every contribution goes through a Pull Request that must be **reviewed and approved** by a maintainer before it can be merged.
 

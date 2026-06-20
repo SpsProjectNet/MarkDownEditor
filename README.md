@@ -1,38 +1,38 @@
 <div align="center">
 
-# 📝 Markdown Editor
+# Markdown Editor
 
 **A minimal, fast and elegant Markdown editor — built with Electron.**
 
 Write in Markdown, see the result instantly, and export to PDF. No clutter, no distractions.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#-installation)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#installation)
 [![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F.svg?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Languages](https://img.shields.io/badge/i18n-11%20languages-orange.svg)](#-localization)
+[![Languages](https://img.shields.io/badge/i18n-11%20languages-orange.svg)](#localization)
 
 </div>
 
 ---
 
-## ✨ Features
+## Features
 
-- 🖋️ **Live preview** — write Markdown on one side, see the rendered result on the other.
-- 🔄 **Editable preview (WYSIWYG)** — edit the rendered document directly; changes are converted back to clean Markdown.
-- 🧰 **Formatting toolbar** — headings (H1–H3), bold, italic, lists, quotes, inline code, links, images, videos and emojis — all one click away.
-- 🗂️ **Multi-tab** — open and work on several files at once, one tab per document.
-- 💾 **Save, Undo / Redo & Revert** — full control over your edits, with unsaved-changes protection on close.
-- 🖨️ **Print & Export to PDF** — turn any document into a clean, print-ready PDF.
-- 🖼️ **Media insertion** — quickly embed images, videos and emojis.
-- 🔗 **File associations** — open `.md`, `.markdown` and `.txt` files straight from your file manager ("Open with").
-- ♻️ **Session restore** — reopens the files you had open last time.
-- 🌍 **11 languages** — automatic system-language detection with a manual switcher.
-- 🔔 **Update notifications** — get notified inside the app when a new version is available.
-- 🪟 **Cross-platform** — native builds for Windows, macOS and Linux.
+- **Live preview** — write Markdown on one side, see the rendered result on the other.
+- **Editable preview (WYSIWYG)** — edit the rendered document directly; changes are converted back to clean Markdown.
+- **Formatting toolbar** — headings (H1–H3), bold, italic, lists, quotes, inline code, links, images, videos and emojis — all one click away.
+- **Multi-tab** — open and work on several files at once, one tab per document.
+- **Save, Undo / Redo & Revert** — full control over your edits, with unsaved-changes protection on close.
+- **Print & Export to PDF** — turn any document into a clean, print-ready PDF.
+- **Media insertion** — quickly embed images, videos and emojis.
+- **File associations** — open `.md`, `.markdown` and `.txt` files straight from your file manager ("Open with").
+- **Session restore** — reopens the files you had open last time.
+- **11 languages** — automatic system-language detection with a manual switcher.
+- **Update notifications** — get notified inside the app when a new version is available.
+- **Cross-platform** — native builds for Windows, macOS and Linux.
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Download a ready-made build
 
@@ -45,12 +45,12 @@ Grab the latest installer for your operating system from the
 | macOS    | `.dmg` |
 | Linux    | `.AppImage` / `.deb` |
 
-> ℹ️ macOS builds are not code-signed, so Gatekeeper may show a warning on first launch.
-> Right-click the app → **Open** to run it the first time.
+> macOS builds are not code-signed, so Gatekeeper may show a warning on first launch.
+> Right-click the app and choose **Open** to run it the first time.
 
 ---
 
-## 🚀 Getting started (from source)
+## Getting started (from source)
 
 Requirements: [Node.js](https://nodejs.org/) 20+ and npm.
 
@@ -68,7 +68,7 @@ npm start
 
 ---
 
-## 🛠️ Build
+## Build
 
 Create distributable installers with [electron-builder](https://www.electron.build/):
 
@@ -83,7 +83,7 @@ The output is generated in the `dist/` folder.
 
 ---
 
-## 📖 Usage
+## Usage
 
 1. **Open** a Markdown file (or start typing right away).
 2. Toggle **Source** to switch between the preview-only view and the split editor/preview view.
@@ -93,27 +93,27 @@ The output is generated in the `dist/` folder.
 
 ---
 
-## 🌍 Localization
+## Localization
 
 Available in **11 languages**, with automatic detection of your system language
 and a manual switcher in the toolbar:
 
-🇬🇧 English · 🇮🇹 Italiano · 🇪🇸 Español · 🇩🇪 Deutsch · 🇫🇷 Français · 🇵🇹 Português · 🇷🇺 Русский · 🇹🇷 Türkçe · 🇬🇷 Ελληνικά · 🇸🇦 العربية · 🇨🇳 中文
+English, Italiano, Español, Deutsch, Français, Português, Русский, Türkçe, Ελληνικά, العربية, 中文
 
 Translations live in the [`locales/`](locales/) folder — contributions for new languages are very welcome!
 
 ---
 
-## 🧱 Tech stack
+## Tech stack
 
 - [**Electron**](https://www.electronjs.org/) — cross-platform desktop runtime
-- [**marked**](https://marked.js.org/) — Markdown → HTML rendering
-- [**turndown**](https://github.com/mixmark-io/turndown) — HTML → Markdown conversion
+- [**marked**](https://marked.js.org/) — Markdown to HTML rendering
+- [**turndown**](https://github.com/mixmark-io/turndown) — HTML to Markdown conversion
 - [**electron-builder**](https://www.electron.build/) — packaging & distribution
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please note that **every change goes through a Pull Request
 that must be reviewed and approved** before it is merged — no changes are pushed
@@ -123,7 +123,7 @@ Read the [**Contributing guide**](CONTRIBUTING.md) for the full workflow.
 
 ---
 
-## 📄 License
+## License
 
 Released under the [**MIT License**](LICENSE).
 
@@ -131,19 +131,19 @@ Released under the [**MIT License**](LICENSE).
 
 <div align="center">
 
-### Made with ❤️ by [SpsProject.net](https://spsproject.net)
+### Made by [SpsProject.net](https://spsproject.net)
 
 A project by **Cristian Segattini**
 
 <br/>
 
-**🏢 SpsProject.net**
+**SpsProject.net**
 
 [![Facebook](https://img.shields.io/badge/Facebook-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/SpsProject.Net)
 [![Instagram](https://img.shields.io/badge/Instagram-E4405F?logo=instagram&logoColor=white)](https://www.instagram.com/spsproject)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/company/spsproject.net)
 
-**👤 Cristian Segattini**
+**Cristian Segattini**
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/cristian-segattini/)
 
