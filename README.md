@@ -48,8 +48,21 @@ Grab the latest installer for your operating system from the
 | macOS    | `.dmg` |
 | Linux    | `.AppImage` / `.deb` |
 
-> macOS builds are not code-signed, so Gatekeeper may show a warning on first launch.
-> Right-click the app and choose **Open** to run it the first time.
+### "Unknown publisher" / security warning
+
+The installers are **not code-signed** yet, so your system may show a security
+warning the first time you run them. This is expected for a new, unsigned app —
+it does **not** mean the file is unsafe. To proceed:
+
+- **Windows (SmartScreen):** click **More info**, then **Run anyway**.
+- **macOS (Gatekeeper):** right-click the app and choose **Open**, then confirm.
+  If macOS blocks it, go to *System Settings → Privacy & Security* and click
+  **Open Anyway**.
+- **Linux (AppImage):** make the file executable with
+  `chmod +x MarkdownEditor-*.AppImage`, then run it.
+
+> Code signing (a paid certificate) will be added in a future release to remove
+> these warnings.
 
 ---
 
