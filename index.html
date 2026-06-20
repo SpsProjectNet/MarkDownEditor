@@ -16,7 +16,8 @@
       <button id="openBtn" data-i18n="open" data-i18n-title="open.title">Open</button>
       <button id="sourceBtn" data-i18n="source" data-i18n-title="source.title">Source</button>
       <button id="saveBtn" data-i18n="save" data-i18n-title="save.title">Save</button>
-      <button id="revertBtn" data-i18n="revert" data-i18n-title="revert.title">Revert</button>
+      <button id="undoBtn" class="arrow-btn" data-i18n-title="undo.title" title="Undo">&#8592;</button>
+      <button id="redoBtn" class="arrow-btn" data-i18n-title="redo.title" title="Redo">&#8594;</button>
       <button id="printBtn" data-i18n="print" data-i18n-title="print.title">Print</button>
       <button id="exportBtn" data-i18n-title="pdf.title">PDF</button>
     </div>
@@ -45,15 +46,20 @@
       <button data-media="video" data-i18n="video" data-i18n-title="video.title">Video</button>
     </div>
 
-    <!-- Help menu, pinned to the right of the controls bar -->
+    <!-- Help and language menus, pinned to the right of the controls bar -->
     <div id="helpMenu" class="help-menu">
+      <div class="lang-menu">
+        <button id="langBtn" class="lang-btn" data-i18n-title="menu.language">EN</button>
+        <div id="langDropdown" class="help-dropdown lang-dropdown hidden">
+          <div class="help-label" data-i18n="menu.language">Language</div>
+          <div id="languageList"></div>
+        </div>
+      </div>
+
       <button id="helpToggle" class="help-toggle" data-i18n-title="help.title">?</button>
       <div id="helpDropdown" class="help-dropdown hidden">
         <button data-help="update" hidden>Update</button>
         <button data-help="about" data-i18n="menu.about">About</button>
-        <div class="help-separator"></div>
-        <div class="help-label" data-i18n="menu.language">Language</div>
-        <div id="languageList"></div>
       </div>
     </div>
   </section>

@@ -7,7 +7,8 @@ const tabBar = document.getElementById('tabBar');
 
 const openButton = document.getElementById('openBtn');
 const saveButton = document.getElementById('saveBtn');
-const revertButton = document.getElementById('revertBtn');
+const undoButton = document.getElementById('undoBtn');
+const redoButton = document.getElementById('redoBtn');
 const printButton = document.getElementById('printBtn');
 const exportButton = document.getElementById('exportBtn');
 const sourceButton = document.getElementById('sourceBtn');
@@ -19,6 +20,8 @@ const helpDropdown = document.getElementById('helpDropdown');
 const iconButton = document.getElementById('iconBtn');
 const emojiPicker = document.getElementById('emojiPicker');
 const languageList = document.getElementById('languageList');
+const langButton = document.getElementById('langBtn');
+const langDropdown = document.getElementById('langDropdown');
 
 // Translation strings for the active locale, loaded from the main process.
 let i18nStrings = {};
@@ -39,6 +42,9 @@ function t(key, params) {
 
 // Apply the loaded strings to every element carrying a data-i18n* attribute.
 function applyTranslations() {
+  // Set the text direction (right-to-left for languages such as Arabic).
+  document.documentElement.dir = i18nStrings['lang.dir'] === 'rtl' ? 'rtl' : 'ltr';
+
   document.querySelectorAll('[data-i18n]').forEach((element) => {
     element.textContent = t(element.dataset.i18n);
   });
@@ -68,6 +74,9 @@ let activeTabIndex = -1;
 
 // Timer handle used to debounce writing the session to disk while typing.
 let sessionSaveTimer = null;
+
+// Timer handle used to debounce recording undo history while typing.
+let historyTimer = null;
 
 // Return the currently active tab object, or null when no tab is open.
 function getActiveTab() {
@@ -131,6 +140,7 @@ function refreshActiveView() {
   }
 
   renderPreview();
+  updateUndoRedoButtons();
 }
 
 // Make the tab at the given index active and refresh every view.
@@ -154,7 +164,13 @@ function openTab(filePath, content) {
     return;
   }
 
-  openTabs.push({ filePath, content, isModified: false });
+  openTabs.push({
+    filePath,
+    content,
+    isModified: false,
+    history: [content],
+    historyIndex: 0
+  });
   setActiveTab(openTabs.length - 1);
 }
 
@@ -207,6 +223,89 @@ function scheduleSessionSave() {
   }, 400);
 }
 
+// Maximum number of undo states kept per tab.
+const MAX_HISTORY = 100;
+
+// Enable or disable the undo/redo buttons for the active tab.
+function updateUndoRedoButtons() {
+  const tab = getActiveTab();
+  undoButton.disabled = !tab || tab.historyIndex <= 0;
+  redoButton.disabled = !tab || tab.historyIndex >= tab.history.length - 1;
+}
+
+// Record the current content of the active tab as a new undo state.
+function recordHistory() {
+  const tab = getActiveTab();
+  if (!tab) return;
+  if (tab.history[tab.historyIndex] === tab.content) return;
+
+  // Drop any redo states, then push the new one.
+  tab.history = tab.history.slice(0, tab.historyIndex + 1);
+  tab.history.push(tab.content);
+  tab.historyIndex = tab.history.length - 1;
+
+  if (tab.history.length > MAX_HISTORY) {
+    tab.history.shift();
+    tab.historyIndex -= 1;
+  }
+
+  updateUndoRedoButtons();
+}
+
+// Record history after a short pause, so a burst of typing is one undo step.
+function scheduleHistory() {
+  if (historyTimer !== null) clearTimeout(historyTimer);
+  historyTimer = setTimeout(() => {
+    historyTimer = null;
+    recordHistory();
+  }, 500);
+}
+
+// Make sure any pending edit is recorded before an undo/redo step.
+function flushHistory() {
+  if (historyTimer !== null) {
+    clearTimeout(historyTimer);
+    historyTimer = null;
+    recordHistory();
+  }
+}
+
+// Apply the active tab content (after an undo/redo) to the editor and preview.
+function applyHistoryState() {
+  const tab = getActiveTab();
+  if (!tab) return;
+  tab.content = tab.history[tab.historyIndex];
+  tab.isModified = true;
+  editor.value = tab.content;
+  renderPreview();
+  renderTabBar();
+  updateUndoRedoButtons();
+  scheduleSessionSave();
+}
+
+// Undo: step back to the previous content state.
+function undo() {
+  const tab = getActiveTab();
+  if (!tab) return;
+  flushHistory();
+  if (tab.historyIndex <= 0) return;
+  tab.historyIndex -= 1;
+  applyHistoryState();
+}
+
+// Redo: step forward to the next content state.
+function redo() {
+  const tab = getActiveTab();
+  if (!tab) return;
+  flushHistory();
+  if (tab.historyIndex >= tab.history.length - 1) return;
+  tab.historyIndex += 1;
+  applyHistoryState();
+}
+
+undoButton.addEventListener('click', undo);
+redoButton.addEventListener('click', redo);
+
 // Restore the previous session on startup.
 // Files that no longer exist are already filtered out by the main process.
 async function restoreSession() {
@@ -216,7 +315,9 @@ async function restoreSession() {
     openTabs = session.tabs.map((tab) => ({
       filePath: tab.filePath,
       content: tab.content,
-      isModified: false
+      isModified: false,
+      history: [tab.content],
+      historyIndex: 0
     }));
 
     const restoredIndex = session.activeTabIndex;
@@ -240,6 +341,7 @@ editor.addEventListener('input', () => {
   renderTabBar();
   renderPreview();
   scheduleSessionSave();
+  scheduleHistory();
 });
 
 // Live editing of the rendered preview: convert its HTML back to Markdown and
@@ -255,6 +357,7 @@ function syncMarkdownFromPreview() {
   editor.value = markdown;
   renderTabBar();
   scheduleSessionSave();
+  scheduleHistory();
 }
 
 preview.addEventListener('input', syncMarkdownFromPreview);
@@ -403,6 +506,7 @@ document.addEventListener('selectionchange', updateActiveFormats);
 // Open or close the help dropdown.
 helpToggle.addEventListener('click', (event) => {
   event.stopPropagation();
+  langDropdown.classList.add('hidden');
   helpDropdown.classList.toggle('hidden');
 });
 
@@ -430,10 +534,23 @@ window.api.onUpdateAvailable((info) => {
   }
 });
 
-// Close the help dropdown when clicking anywhere else.
+// Close the dropdowns when clicking anywhere else.
 document.addEventListener('click', () => {
   helpDropdown.classList.add('hidden');
   emojiPicker.classList.add('hidden');
+  langDropdown.classList.add('hidden');
+});
+
+// Open or close the language dropdown (showing the current language code).
+langButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  helpDropdown.classList.add('hidden');
+  langDropdown.classList.toggle('hidden');
+});
+
+// Keep clicks inside the language dropdown from closing it prematurely.
+langDropdown.addEventListener('click', (event) => {
+  event.stopPropagation();
 });
 
 // Emoji available in the "Icon" picker.
@@ -540,32 +657,6 @@ saveButton.addEventListener('click', async () => {
   scheduleSessionSave();
 });
 
-// Revert: reload the active file from disk, discarding unsaved changes.
-revertButton.addEventListener('click', async () => {
-  const tab = getActiveTab();
-  if (!tab) {
-    statusLabel.textContent = t('status.noFileToRevert');
-    return;
-  }
-  if (!tab.isModified) {
-    statusLabel.textContent = t('status.noChangesToRevert');
-    return;
-  }
-
-  const result = await window.api.readFile(tab.filePath);
-  if (result.error) {
-    statusLabel.textContent = t('status.revertError', { msg: result.error });
-    return;
-  }
-
-  tab.content = result.content;
-  tab.isModified = false;
-  refreshActiveView();
-  renderTabBar();
-  statusLabel.textContent = t('status.reverted', { path: tab.filePath });
-  scheduleSessionSave();
-});
-
 // Print: trigger the native print dialog through the main process.
 printButton.addEventListener('click', () => {
   window.api.print();
@@ -631,6 +722,7 @@ let availableLocales = [];
 // Build the language list in the help menu, marking the active language.
 function buildLanguageMenu(locales, activeLocale) {
   availableLocales = locales;
+  langButton.textContent = activeLocale.toUpperCase();
   languageList.innerHTML = '';
 
   locales.forEach((locale) => {
@@ -660,7 +752,7 @@ async function changeLanguage(locale) {
     }
   }
 
-  helpDropdown.classList.add('hidden');
+  langDropdown.classList.add('hidden');
 }
 
 // Show the application version in the status bar and the window title.
