@@ -141,6 +141,7 @@ A project by **Cristian Segattini**
 
 [![Facebook](https://img.shields.io/badge/Facebook-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/SpsProject.Net)
 [![Instagram](https://img.shields.io/badge/Instagram-E4405F?logo=instagram&logoColor=white)](https://www.instagram.com/spsproject)
+[![X](https://img.shields.io/badge/X-000000?logo=x&logoColor=white)](https://x.com/SpsProject_Net)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/company/spsproject.net)
 
 **Cristian Segattini**
