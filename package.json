@@ -1,0 +1,112 @@
+{
+  "name": "markdown-editor",
+  "version": "0.0.1",
+  "description": "Editor Markdown minimalista con Electron",
+  "homepage": "https://github.com/SpsProjectNet/markdowneditor",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "pack": "electron-builder --dir"
+  },
+  "author": "SpsProject.net <spsproject.net@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "marked": "^12.0.0",
+    "turndown": "^7.2.4"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "net.spsproject.markdowneditor",
+    "productName": "MarkdownEditor",
+    "fileAssociations": [
+      {
+        "ext": "md",
+        "name": "Markdown Document",
+        "description": "Markdown Document",
+        "role": "Editor"
+      },
+      {
+        "ext": "markdown",
+        "name": "Markdown Document",
+        "description": "Markdown Document",
+        "role": "Editor"
+      }
+    ],
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "style.css",
+      "node_modules/marked/**",
+      "node_modules/turndown/**"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Markdown Editor"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64",
+            "armv7l"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64",
+            "armv7l"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "maintainer": "SpsProject.net <spsproject.net@gmail.com>",
+      "executableName": "markdown-editor",
+      "desktop": {
+        "Name": "Markdown Editor",
+        "Comment": "Minimal Markdown editor"
+      }
+    }
+  }
+}

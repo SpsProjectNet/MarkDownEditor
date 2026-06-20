@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Markdown Editor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Tab bar: one tab per open file -->
+  <nav id="tabBar" class="tab-bar"></nav>
+
+  <!-- Collapsible controls: file actions plus formatting commands, text only.
+       Starts collapsed (only the file actions and the "Edit" toggle are shown). -->
+  <section id="formatBar" class="format-bar collapsed">
+    <div class="format-group file-actions">
+      <button id="openBtn" title="Open file">Open</button>
+      <button id="sourceBtn" title="Toggle source view">Source</button>
+      <button id="saveBtn" title="Save">Save</button>
+      <button id="revertBtn" title="Revert to the saved version">Revert</button>
+      <button id="printBtn" title="Print">Print</button>
+      <button id="exportBtn" title="Export to PDF">PDF</button>
+    </div>
+
+    <button id="formatToggle" class="format-toggle" title="Collapse or expand the editing controls">
+      <span class="format-chevron">v</span> Edit
+    </button>
+
+    <div class="format-actions">
+      <button data-command="h1" title="Heading 1">H1</button>
+      <button data-command="h2" title="Heading 2">H2</button>
+      <button data-command="h3" title="Heading 3">H3</button>
+      <button data-command="paragraph" title="Normal text">P</button>
+      <button data-command="bold" title="Bold"><strong>B</strong></button>
+      <button data-command="italic" title="Italic"><em>I</em></button>
+      <button data-command="unorderedList" title="Bulleted list">List</button>
+      <button data-command="orderedList" title="Numbered list">1.</button>
+      <button data-command="quote" title="Quote">Quote</button>
+      <button data-command="code" title="Inline code">Code</button>
+      <button data-command="link" title="Link">Link</button>
+      <button data-media="image" title="Insert image">Image</button>
+      <div class="emoji-menu">
+        <button id="iconBtn" title="Insert emoji">Icon</button>
+        <div id="emojiPicker" class="emoji-picker hidden"></div>
+      </div>
+      <button data-media="video" title="Insert video">Video</button>
+    </div>
+
+    <!-- Help menu, pinned to the right of the controls bar -->
+    <div id="helpMenu" class="help-menu">
+      <button id="helpToggle" class="help-toggle" title="Help">?</button>
+      <div id="helpDropdown" class="help-dropdown hidden">
+        <button data-help="update" hidden>Aggiornamento</button>
+        <button data-help="about">Informazioni su</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Layout: shows the preview only by default; "Source" turns it into a split view -->
+  <main class="split">
+    <section class="pane editor-pane">
+      <textarea id="editor" placeholder="Write your Markdown here..."></textarea>
+    </section>
+    <section class="pane preview-pane">
+      <div id="preview" contenteditable="true" spellcheck="false"></div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span id="status">No file open</span>
+    <span id="version" class="version"></span>
+  </footer>
+
+  <script src="./node_modules/marked/marked.min.js"></script>
+  <script src="./node_modules/turndown/dist/turndown.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

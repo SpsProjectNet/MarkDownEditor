@@ -1,0 +1,381 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #2c2c2c;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* --- Tab bar --- */
+.tab-bar {
+  display: flex;
+  background: #ececec;
+  border-bottom: 1px solid #ddd;
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-right: 1px solid #ddd;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.tab.active {
+  background: #fff;
+  font-weight: 600;
+}
+
+.tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  color: #888;
+  border-radius: 3px;
+  padding: 0 5px;
+  line-height: 1;
+}
+
+.tab-close:hover {
+  background: #ddd;
+  color: #000;
+}
+
+/* --- Formatting controls (collapsible) --- */
+.format-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #fafafa;
+  border-bottom: 1px solid #ddd;
+  flex-wrap: wrap;
+}
+
+.format-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #444;
+}
+
+.format-toggle:hover {
+  background: #efefef;
+}
+
+.format-chevron {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+/* When collapsed, hide the action buttons and rotate the chevron */
+.format-bar.collapsed .format-actions {
+  display: none;
+}
+
+.format-bar.collapsed .format-chevron {
+  transform: rotate(-90deg);
+}
+
+.format-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.format-actions button {
+  min-width: 32px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+}
+
+.format-actions button:hover {
+  background: #ececec;
+}
+
+/* Highlight the control that matches the formatting of the current selection */
+.format-actions button.active {
+  background: #2d6cdf;
+  border-color: #2d6cdf;
+  color: #fff;
+}
+
+/* File action buttons (Open, Source, Save, Print) */
+.file-actions {
+  display: flex;
+  gap: 4px;
+  padding-right: 8px;
+  border-right: 1px solid #ddd;
+}
+
+.file-actions button {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+}
+
+.file-actions button:hover {
+  background: #ececec;
+}
+
+/* Active state of the Source toggle button */
+#sourceBtn.active {
+  background: #d9d9d9;
+  border-color: #999;
+  font-weight: 600;
+}
+
+/* --- Emoji picker (the "Icon" control) --- */
+.emoji-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.emoji-picker {
+  /* Positioned with fixed coordinates computed in JS so it always stays
+     inside the window, even when the window is small. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 240px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+.emoji-picker.hidden {
+  display: none;
+}
+
+.emoji-picker button {
+  min-width: 0;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.emoji-picker button:hover {
+  background: #f0f0f0;
+}
+
+/* --- Help menu (pinned to the right) --- */
+.help-menu {
+  position: relative;
+  margin-left: auto;
+}
+
+.help-toggle {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+}
+
+.help-toggle:hover {
+  background: #ececec;
+}
+
+.help-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  z-index: 100;
+}
+
+.help-dropdown.hidden {
+  display: none;
+}
+
+.help-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+}
+
+.help-dropdown button:hover {
+  background: #f0f0f0;
+}
+
+/* Hidden menu items (e.g. "Update" when no update exists) stay invisible */
+.help-dropdown button[hidden] {
+  display: none;
+}
+
+/* --- Split view --- */
+.split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.pane {
+  flex: 1;
+  overflow: auto;
+}
+
+.editor-pane {
+  border-right: 1px solid #ddd;
+}
+
+/* Only the preview is shown by default; the editor appears with "Source" */
+.editor-pane {
+  display: none;
+}
+
+body.show-source .editor-pane {
+  display: block;
+}
+
+#editor {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 16px;
+  font-family: "Consolas", "Menlo", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+#preview {
+  padding: 16px 24px;
+  line-height: 1.6;
+  outline: none;
+  min-height: 100%;
+}
+
+/* --- Preview typography --- */
+#preview h1, #preview h2, #preview h3 {
+  margin: 0.6em 0 0.4em;
+  line-height: 1.3;
+}
+
+#preview h1 { border-bottom: 1px solid #eee; padding-bottom: 0.2em; }
+#preview p { margin: 0.6em 0; }
+#preview ul, #preview ol { margin: 0.6em 0 0.6em 1.4em; }
+
+#preview code {
+  background: #f3f3f3;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: "Consolas", monospace;
+  font-size: 0.9em;
+}
+
+#preview pre {
+  background: #f3f3f3;
+  padding: 12px;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+#preview pre code {
+  background: none;
+  padding: 0;
+}
+
+#preview blockquote {
+  border-left: 3px solid #ddd;
+  margin: 0.6em 0;
+  padding-left: 12px;
+  color: #666;
+}
+
+#preview table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+}
+
+#preview th, #preview td {
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+}
+
+#preview img { max-width: 100%; }
+#preview video { max-width: 100%; }
+
+/* --- Status bar --- */
+.statusbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 12px;
+  background: #f5f5f5;
+  border-top: 1px solid #ddd;
+  font-size: 12px;
+  color: #666;
+}
+
+.statusbar .version {
+  color: #999;
+  padding-left: 12px;
+}
+
+/* Printing shows only the preview */
+@media print {
+  .tab-bar, .format-bar, .statusbar, .editor-pane { display: none !important; }
+  .split { display: block; }
+  .preview-pane { overflow: visible; }
+}
