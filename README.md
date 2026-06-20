@@ -6,10 +6,13 @@
 
 Write in Markdown, see the result instantly, and export to PDF. No clutter, no distractions.
 
+[![Download latest](https://img.shields.io/github/v/release/SpsProjectNet/markdowneditor?label=download&sort=semver&color=success)](https://github.com/SpsProjectNet/markdowneditor/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](#installation)
 [![Built with Electron](https://img.shields.io/badge/built%20with-Electron-47848F.svg?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Languages](https://img.shields.io/badge/i18n-11%20languages-orange.svg)](#localization)
+
+### [Download the latest version](https://github.com/SpsProjectNet/markdowneditor/releases/latest)
 
 </div>
 
@@ -37,7 +40,7 @@ Write in Markdown, see the result instantly, and export to PDF. No clutter, no d
 ### Download a ready-made build
 
 Grab the latest installer for your operating system from the
-[**Releases page**](https://github.com/SpsProjectNet/markdowneditor/releases):
+[**latest release**](https://github.com/SpsProjectNet/markdowneditor/releases/latest):
 
 | Platform | Format |
 |----------|--------|
