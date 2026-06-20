@@ -1,0 +1,100 @@
+# Build the app for Windows, macOS and Linux in the cloud and publish a release.
+#
+# Trigger: pushing a version tag (e.g. v0.0.2) or running it manually.
+# Result:
+#   - one build job per OS produces the native installers;
+#   - the "release" job attaches every installer to a GitHub Release;
+#   - the "pages" job publishes latest.json to GitHub Pages so the in-app
+#     update notification (UPDATE_INFO_URL in main.js) can detect new versions.
+#
+# Notes:
+#   - macOS builds are not code-signed (no Apple certificate); the .dmg works
+#     but Gatekeeper shows a warning on first launch.
+#   - Enable Pages once under Settings -> Pages -> Source: "GitHub Actions".
+
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            script: dist:linux
+          - os: windows-latest
+            script: dist:win
+          - os: macos-latest
+            script: dist:mac
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run ${{ matrix.script }}
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}
+          if-no-files-found: ignore
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.blockmap
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all installers
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    environment:
+      name: github-pages
+    steps:
+      - name: Generate latest.json
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p public
+          echo "{\"version\":\"$VERSION\",\"url\":\"https://github.com/${GITHUB_REPOSITORY}/releases/latest\"}" > public/latest.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
