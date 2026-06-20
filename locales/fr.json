@@ -8,6 +8,8 @@
   "save.title": "Enregistrer",
   "revert": "Rétablir",
   "revert.title": "Rétablir la version enregistrée",
+  "undo.title": "Annuler",
+  "redo.title": "Refaire",
   "print": "Imprimer",
   "print.title": "Imprimer",
   "pdf.title": "Exporter en PDF",

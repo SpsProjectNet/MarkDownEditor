@@ -8,6 +8,8 @@
   "save.title": "Guardar",
   "revert": "Revertir",
   "revert.title": "Revertir a la versión guardada",
+  "undo.title": "Deshacer",
+  "redo.title": "Rehacer",
   "print": "Imprimir",
   "print.title": "Imprimir",
   "pdf.title": "Exportar a PDF",

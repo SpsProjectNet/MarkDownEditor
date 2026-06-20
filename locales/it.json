@@ -8,6 +8,8 @@
   "save.title": "Salva",
   "revert": "Ripristina",
   "revert.title": "Ripristina la versione salvata",
+  "undo.title": "Annulla",
+  "redo.title": "Ripeti",
   "print": "Stampa",
   "print.title": "Stampa",
   "pdf.title": "Esporta in PDF",

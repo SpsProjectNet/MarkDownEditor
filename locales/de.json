@@ -8,6 +8,8 @@
   "save.title": "Speichern",
   "revert": "Zurücksetzen",
   "revert.title": "Auf gespeicherte Version zurücksetzen",
+  "undo.title": "Rückgängig",
+  "redo.title": "Wiederholen",
   "print": "Drucken",
   "print.title": "Drucken",
   "pdf.title": "Als PDF exportieren",

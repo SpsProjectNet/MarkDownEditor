@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const LOCALES_DIR = path.join(__dirname, 'locales');
-const SUPPORTED = ['en', 'it', 'es', 'fr', 'de', 'pt'];
+const SUPPORTED = ['en', 'it', 'es', 'fr', 'de', 'pt', 'el', 'ru', 'tr', 'zh', 'ar'];
 const DEFAULT_LOCALE = 'en';
 
 let currentLocale = DEFAULT_LOCALE;

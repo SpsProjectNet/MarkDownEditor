@@ -1,5 +1,6 @@
 {
   "lang.name": "English",
+  "lang.dir": "ltr",
   "open": "Open",
   "open.title": "Open file",
   "source": "Source",
@@ -8,6 +9,8 @@
   "save.title": "Save",
   "revert": "Revert",
   "revert.title": "Revert to the saved version",
+  "undo.title": "Undo",
+  "redo.title": "Redo",
   "print": "Print",
   "print.title": "Print",
   "pdf.title": "Export to PDF",
