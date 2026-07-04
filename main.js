@@ -186,6 +186,8 @@ async function checkForUpdate(isManual) {
           url: updateDownloadUrl
         });
       }
+      // Notify the user with a popup and offer to open the download page.
+      await promptUpdate(latestVersion);
     } else if (isManual) {
       await dialog.showMessageBox(mainWindow, {
         type: 'info',
@@ -203,6 +205,26 @@ async function checkForUpdate(isManual) {
         detail: String(error && error.message ? error.message : error)
       });
     }
+  }
+}
+
+// Show a popup announcing an available update and open the download page
+// in the browser when the user accepts.
+async function promptUpdate(version) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: i18n.t('dialog.updates.title'),
+    message: i18n.t('dialog.update.available'),
+    detail: i18n.t('dialog.update.detail', { version }),
+    buttons: [i18n.t('dialog.button.download'), i18n.t('dialog.button.later')],
+    defaultId: 0,
+    cancelId: 1
+  });
+
+  if (response === 0) {
+    await shell.openExternal(updateDownloadUrl || DOWNLOAD_PAGE_URL);
   }
 }
 
@@ -294,13 +316,44 @@ ipcMain.handle('pick-media', async (event, mediaType) => {
   return filePaths[0];
 });
 
-// Show the native "About" information dialog.
+// About window, kept so a second request focuses it instead of opening a copy.
+let aboutWindow = null;
+
+// Show the "About" window with version, license details and credits/links.
 ipcMain.handle('show-about', async () => {
-  await dialog.showMessageBox(mainWindow, {
-    type: 'info',
+  if (aboutWindow && !aboutWindow.isDestroyed()) {
+    aboutWindow.focus();
+    return;
+  }
+
+  aboutWindow = new BrowserWindow({
+    width: 440,
+    height: 600,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    parent: mainWindow,
+    modal: true,
     title: i18n.t('dialog.about.title'),
-    message: 'Markdown Editor',
-    detail: i18n.t('dialog.about.detail', { version: app.getVersion() })
+    icon: appIcon,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  aboutWindow.setMenuBarVisibility(false);
+  aboutWindow.loadFile('about.html', { query: { v: app.getVersion() } });
+
+  // Open every link in the user's default browser, never inside the window.
+  aboutWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  aboutWindow.on('closed', () => {
+    aboutWindow = null;
   });
 });
 

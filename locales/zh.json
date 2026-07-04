@@ -74,6 +74,10 @@
   "dialog.updates.title": "更新",
   "dialog.updates.upToDate": "您正在使用最新版本（{version}）。",
   "dialog.updates.error": "无法检查更新。",
+  "dialog.update.available": "有新版本可用",
+  "dialog.update.detail": "版本 {version} 已可用。是否立即下载？",
+  "dialog.button.download": "下载",
+  "dialog.button.later": "稍后",
   "dialog.open.title": "打开 Markdown 文件",
   "dialog.export.title": "导出为 PDF",
   "dialog.media.title": "选择媒体"

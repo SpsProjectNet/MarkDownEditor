@@ -75,6 +75,10 @@
   "dialog.updates.title": "التحديثات",
   "dialog.updates.upToDate": "أنت تستخدم أحدث إصدار ({version}).",
   "dialog.updates.error": "تعذّر التحقق من التحديثات.",
+  "dialog.update.available": "يتوفر إصدار جديد",
+  "dialog.update.detail": "الإصدار {version} متاح. هل تريد تنزيله الآن؟",
+  "dialog.button.download": "تنزيل",
+  "dialog.button.later": "لاحقًا",
   "dialog.open.title": "فتح ملف Markdown",
   "dialog.export.title": "تصدير إلى PDF",
   "dialog.media.title": "اختيار وسائط"

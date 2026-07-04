@@ -74,6 +74,10 @@
   "dialog.updates.title": "Ενημερώσεις",
   "dialog.updates.upToDate": "Χρησιμοποιείτε την πιο πρόσφατη έκδοση ({version}).",
   "dialog.updates.error": "Δεν ήταν δυνατός ο έλεγχος για ενημερώσεις.",
+  "dialog.update.available": "Διαθέσιμη νέα έκδοση",
+  "dialog.update.detail": "Η έκδοση {version} είναι διαθέσιμη. Θέλετε να τη λάβετε τώρα;",
+  "dialog.button.download": "Λήψη",
+  "dialog.button.later": "Αργότερα",
   "dialog.open.title": "Άνοιγμα αρχείου Markdown",
   "dialog.export.title": "Εξαγωγή σε PDF",
   "dialog.media.title": "Επιλογή πολυμέσου"

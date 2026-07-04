@@ -1,6 +1,6 @@
 {
   "name": "markdown-editor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Editor Markdown minimalista con Electron",
   "homepage": "https://github.com/SpsProjectNet/markdowneditor",
   "main": "main.js",
@@ -45,6 +45,7 @@
       "renderer.js",
       "i18n.js",
       "index.html",
+      "about.html",
       "style.css",
       "locales/**",
       "node_modules/marked/**",

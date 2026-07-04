@@ -74,6 +74,10 @@
   "dialog.updates.title": "Aggiornamenti",
   "dialog.updates.upToDate": "Stai usando l'ultima versione ({version}).",
   "dialog.updates.error": "Impossibile controllare gli aggiornamenti.",
+  "dialog.update.available": "Nuova versione disponibile",
+  "dialog.update.detail": "È disponibile la versione {version}. Vuoi scaricarla ora?",
+  "dialog.button.download": "Scarica",
+  "dialog.button.later": "Più tardi",
   "dialog.open.title": "Apri file Markdown",
   "dialog.export.title": "Esporta in PDF",
   "dialog.media.title": "Seleziona media"
