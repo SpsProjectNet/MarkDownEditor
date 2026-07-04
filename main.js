@@ -381,7 +381,12 @@ ipcMain.handle('load-session', async () => {
       activeTabIndex = existingTabs.length - 1;
     }
 
-    return { tabs: existingTabs, activeTabIndex };
+    // Preserve the split layout only when no open file was dropped, so the
+    // stored pane indices still line up with the restored tabs.
+    const split =
+      existingTabs.length === storedTabs.length ? session.split : undefined;
+
+    return { tabs: existingTabs, activeTabIndex, split };
   } catch (error) {
     // No session file yet, or it is unreadable: start with an empty session.
     return { tabs: [], activeTabIndex: -1 };

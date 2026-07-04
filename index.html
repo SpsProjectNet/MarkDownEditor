@@ -48,6 +48,15 @@
 
     <!-- Help and language menus, pinned to the right of the controls bar -->
     <div id="helpMenu" class="help-menu">
+      <!-- Split view toggle. Drag a tab to the left/right edge to split, or use
+           this button to toggle a two-document side-by-side view. -->
+      <button id="splitBtn" class="split-btn" data-i18n-title="split.title" title="Split view" aria-label="Split view">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+          <line x1="8" y1="2.5" x2="8" y2="13.5" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+      </button>
+
       <div class="lang-menu">
         <button id="langBtn" class="lang-btn" data-i18n-title="menu.language">EN</button>
         <div id="langDropdown" class="help-dropdown lang-dropdown hidden">
@@ -64,14 +73,32 @@
     </div>
   </section>
 
-  <!-- Layout: shows the preview only by default; "Source" turns it into a split view -->
-  <main class="split">
-    <section class="pane editor-pane">
-      <textarea id="editor" data-i18n-placeholder="editor.placeholder" placeholder="Write your Markdown here..."></textarea>
-    </section>
-    <section class="pane preview-pane">
-      <div id="preview" contenteditable="true" spellcheck="false"></div>
-    </section>
+  <!-- Workspace: one document view by default, two side by side when split.
+       Each doc-view shows the preview only, or source + preview with "Source". -->
+  <main id="workspace" class="workspace">
+    <div class="doc-view" data-side="left">
+      <div class="split">
+        <section class="pane editor-pane">
+          <textarea class="editor" data-i18n-placeholder="editor.placeholder" placeholder="Write your Markdown here..." spellcheck="false"></textarea>
+        </section>
+        <section class="pane preview-pane">
+          <div class="preview" contenteditable="true" spellcheck="false"></div>
+        </section>
+      </div>
+    </div>
+    <div class="doc-view" data-side="right">
+      <div class="split">
+        <section class="pane editor-pane">
+          <textarea class="editor" data-i18n-placeholder="editor.placeholder" placeholder="Write your Markdown here..." spellcheck="false"></textarea>
+        </section>
+        <section class="pane preview-pane">
+          <div class="preview" contenteditable="true" spellcheck="false"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Highlight shown while dragging a tab, marking the drop side -->
+    <div id="dropIndicator" class="drop-indicator hidden"></div>
   </main>
 
   <footer class="statusbar">

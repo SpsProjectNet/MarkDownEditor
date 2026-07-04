@@ -1,9 +1,9 @@
 // DOM references
-const editor = document.getElementById('editor');
-const preview = document.getElementById('preview');
 const statusLabel = document.getElementById('status');
 const versionLabel = document.getElementById('version');
 const tabBar = document.getElementById('tabBar');
+const workspace = document.getElementById('workspace');
+const dropIndicator = document.getElementById('dropIndicator');
 
 const openButton = document.getElementById('openBtn');
 const saveButton = document.getElementById('saveBtn');
@@ -12,6 +12,7 @@ const redoButton = document.getElementById('redoBtn');
 const printButton = document.getElementById('printBtn');
 const exportButton = document.getElementById('exportBtn');
 const sourceButton = document.getElementById('sourceBtn');
+const splitButton = document.getElementById('splitBtn');
 
 const formatBar = document.getElementById('formatBar');
 const formatToggle = document.getElementById('formatToggle');
@@ -22,6 +23,18 @@ const emojiPicker = document.getElementById('emojiPicker');
 const languageList = document.getElementById('languageList');
 const langButton = document.getElementById('langBtn');
 const langDropdown = document.getElementById('langDropdown');
+
+// The two document views (left and right), each with its own source + preview.
+const views = {};
+document.querySelectorAll('.doc-view').forEach((root) => {
+  const side = root.dataset.side;
+  views[side] = {
+    side,
+    root,
+    editor: root.querySelector('.editor'),
+    preview: root.querySelector('.preview')
+  };
+});
 
 // Translation strings for the active locale, loaded from the main process.
 let i18nStrings = {};
@@ -68,20 +81,57 @@ const turndownService = new TurndownService({
 turndownService.keep(['video', 'iframe']);
 
 // Application state.
-// Each tab is an object: { filePath: string, content: string, isModified: boolean }
+// Each tab is an object: { filePath, content, isModified, history, historyIndex }
 let openTabs = [];
-let activeTabIndex = -1;
+
+// Which open tab is shown in each pane (-1 = none). The right pane is only used
+// while the workspace is split.
+const paneTab = { left: -1, right: -1 };
+
+// Whether the two-document side-by-side view is active.
+let splitActive = false;
+
+// The pane the toolbar, save, undo/redo and formatting commands act on.
+let focusedSide = 'left';
 
 // Timer handle used to debounce writing the session to disk while typing.
 let sessionSaveTimer = null;
 
-// Timer handle used to debounce recording undo history while typing.
-let historyTimer = null;
+// Timer handles used to debounce recording undo history, one per pane.
+const historyTimers = { left: null, right: null };
 
-// Return the currently active tab object, or null when no tab is open.
+// Timer used to restore the status bar after a transient message.
+let statusResetTimer = null;
+
+// Tab index currently being dragged (-1 = none).
+let draggedTabIndex = -1;
+
+// --- Small accessors ------------------------------------------------------
+
+function tabAt(index) {
+  return index >= 0 && index < openTabs.length ? openTabs[index] : null;
+}
+
+// The active tab is the one shown in the focused pane.
 function getActiveTab() {
-  if (activeTabIndex < 0 || activeTabIndex >= openTabs.length) return null;
-  return openTabs[activeTabIndex];
+  return tabAt(paneTab[focusedSide]);
+}
+
+function getFocusedView() {
+  return views[focusedSide];
+}
+
+// The preview element of the focused view (target of formatting commands).
+function focusedPreview() {
+  return getFocusedView().preview;
+}
+
+// Find the first open tab whose index differs from the given one.
+function firstOtherTab(exceptIndex) {
+  for (let i = 0; i < openTabs.length; i++) {
+    if (i !== exceptIndex) return i;
+  }
+  return -1;
 }
 
 // Extract the file name from a full path for display in the tab.
@@ -90,10 +140,64 @@ function getFileName(filePath) {
   return segments[segments.length - 1] || filePath;
 }
 
-// Render the Markdown of the active tab into the preview pane.
-function renderPreview() {
+// Find the index of an open tab by its file path, or -1 when not open.
+function findTabByPath(filePath) {
+  return openTabs.findIndex((tab) => tab.filePath === filePath);
+}
+
+// --- Rendering ------------------------------------------------------------
+
+// Render the given pane's editor and preview from the tab it shows.
+function renderPane(side) {
+  const view = views[side];
+  const tab = tabAt(paneTab[side]);
+
+  if (tab) {
+    if (view.editor.value !== tab.content) view.editor.value = tab.content;
+    view.preview.innerHTML = marked.parse(tab.content);
+  } else {
+    view.editor.value = '';
+    view.preview.innerHTML = '';
+  }
+}
+
+// Re-render both panes from their tabs.
+function renderPanes() {
+  renderPane('left');
+  renderPane('right');
+}
+
+// Reflect the split state and focused pane on the document body/elements.
+function updateLayout() {
+  if (!splitActive) focusedSide = 'left';
+
+  document.body.classList.toggle('split-view', splitActive);
+  splitButton.classList.toggle('active', splitActive);
+
+  Object.keys(views).forEach((side) => {
+    const isFocused = side === focusedSide && (splitActive || side === 'left');
+    views[side].root.classList.toggle('focused', isFocused);
+  });
+}
+
+// Update the status bar for the focused tab.
+function refreshStatus() {
   const tab = getActiveTab();
-  preview.innerHTML = tab ? marked.parse(tab.content) : '';
+  statusLabel.textContent = tab
+    ? tab.isModified
+      ? t('status.modified', { path: tab.filePath })
+      : t('status.open', { path: tab.filePath })
+    : t('status.noFile');
+}
+
+// Show a transient status message, then restore the normal status.
+function flashStatus(message) {
+  statusLabel.textContent = message;
+  if (statusResetTimer !== null) clearTimeout(statusResetTimer);
+  statusResetTimer = setTimeout(() => {
+    statusResetTimer = null;
+    refreshStatus();
+  }, 1800);
 }
 
 // Rebuild the tab bar from the current list of open tabs.
@@ -102,13 +206,39 @@ function renderTabBar() {
 
   openTabs.forEach((tab, index) => {
     const tabElement = document.createElement('div');
-    tabElement.className = 'tab' + (index === activeTabIndex ? ' active' : '');
+
+    let className = 'tab';
+    if (!splitActive) {
+      if (index === paneTab.left) className += ' active';
+    } else if (index === paneTab[focusedSide]) {
+      className += ' active';
+    } else if (index === paneTab.left || index === paneTab.right) {
+      className += ' shown';
+    }
+    tabElement.className = className;
+    tabElement.draggable = true;
+
+    tabElement.addEventListener('dragstart', (event) => {
+      draggedTabIndex = index;
+      tabElement.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', String(index));
+    });
+    tabElement.addEventListener('dragend', () => {
+      draggedTabIndex = -1;
+      tabElement.classList.remove('dragging');
+      hideDropIndicator();
+    });
 
     const titleElement = document.createElement('span');
     titleElement.className = 'tab-title';
     titleElement.textContent = (tab.isModified ? '* ' : '') + getFileName(tab.filePath);
     titleElement.title = tab.filePath;
-    titleElement.addEventListener('click', () => setActiveTab(index));
+    titleElement.addEventListener('click', () => showTab(focusedSide, index));
+    titleElement.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      openTabMenu(event, index);
+    });
 
     const closeElement = document.createElement('span');
     closeElement.className = 'tab-close';
@@ -125,42 +255,108 @@ function renderTabBar() {
   });
 }
 
-// Refresh the editor, preview, path field and status bar for the active tab.
-function refreshActiveView() {
-  const tab = getActiveTab();
-
-  if (tab) {
-    editor.value = tab.content;
-    statusLabel.textContent = tab.isModified
-      ? t('status.modified', { path: tab.filePath })
-      : t('status.open', { path: tab.filePath });
-  } else {
-    editor.value = '';
-    statusLabel.textContent = t('status.noFile');
-  }
-
-  renderPreview();
-  updateUndoRedoButtons();
-}
-
-// Make the tab at the given index active and refresh every view.
-function setActiveTab(index) {
-  activeTabIndex = index;
+// Apply every derived view after a structural change (tab switch, split, etc.).
+function syncEverything() {
+  if (!splitActive) focusedSide = 'left';
+  updateLayout();
   renderTabBar();
-  refreshActiveView();
+  renderPanes();
+  refreshStatus();
+  updateUndoRedoButtons();
   scheduleSessionSave();
 }
 
-// Find the index of an open tab by its file path, or -1 when not open.
-function findTabByPath(filePath) {
-  return openTabs.findIndex((tab) => tab.filePath === filePath);
+// --- Tab / split assignment -----------------------------------------------
+
+// Show a tab in a pane (used by clicks and by opening files). Clicking the left
+// pane just switches the active file; switching the right pane creates a split.
+function showTab(side, index) {
+  if (index < 0 || index >= openTabs.length) return;
+
+  if (!splitActive) {
+    if (side === 'left') {
+      paneTab.left = index;
+      focusedSide = 'left';
+    } else {
+      // Create a split with the requested tab on the right.
+      let leftIndex = paneTab.left;
+      if (leftIndex === index || leftIndex < 0) {
+        leftIndex = firstOtherTab(index);
+        if (leftIndex === -1) {
+          flashStatus(t('split.needTwo'));
+          return;
+        }
+      }
+      paneTab.left = leftIndex;
+      paneTab.right = index;
+      splitActive = true;
+      focusedSide = 'right';
+    }
+  } else {
+    const opposite = side === 'left' ? 'right' : 'left';
+    // Keep the two panes on distinct tabs: swap when needed.
+    if (paneTab[opposite] === index) paneTab[opposite] = paneTab[side];
+    paneTab[side] = index;
+    focusedSide = side;
+  }
+
+  syncEverything();
 }
 
-// Open a file in a tab. If it is already open, activate that tab instead.
+// Assign a dragged tab to a side, creating a split when one is not active yet.
+function dropTab(side, index) {
+  if (index < 0 || index >= openTabs.length) return;
+
+  if (!splitActive) {
+    // The dragged tab goes to `side`; the previously active tab fills the other.
+    const previous = paneTab.left;
+    const other = previous === index || previous < 0 ? firstOtherTab(index) : previous;
+    if (other === -1) {
+      flashStatus(t('split.needTwo'));
+      return;
+    }
+    if (side === 'left') {
+      paneTab.left = index;
+      paneTab.right = other;
+    } else {
+      paneTab.right = index;
+      paneTab.left = other;
+    }
+    splitActive = true;
+    focusedSide = side;
+  } else {
+    const opposite = side === 'left' ? 'right' : 'left';
+    if (paneTab[opposite] === index) paneTab[opposite] = paneTab[side];
+    paneTab[side] = index;
+    focusedSide = side;
+  }
+
+  syncEverything();
+}
+
+// Toggle the two-document split view on or off.
+function toggleSplit() {
+  if (splitActive) {
+    splitActive = false;
+    paneTab.right = -1;
+    focusedSide = 'left';
+  } else {
+    if (openTabs.length < 2) {
+      flashStatus(t('split.needTwo'));
+      return;
+    }
+    paneTab.right = firstOtherTab(paneTab.left);
+    splitActive = true;
+    focusedSide = 'right';
+  }
+  syncEverything();
+}
+
+// Open a file in a tab. If it is already open, show that tab instead.
 function openTab(filePath, content) {
   const existingIndex = findTabByPath(filePath);
   if (existingIndex !== -1) {
-    setActiveTab(existingIndex);
+    showTab(focusedSide, existingIndex);
     return;
   }
 
@@ -171,46 +367,157 @@ function openTab(filePath, content) {
     history: [content],
     historyIndex: 0
   });
-  setActiveTab(openTabs.length - 1);
+  showTab(focusedSide, openTabs.length - 1);
 }
 
-// Close the tab at the given index and activate a neighbouring tab.
+// Close the tab at the given index, keeping both panes on valid tabs.
 // When the file has unsaved changes, ask the user what to do first.
+// Returns true when the tab was closed, false when the user cancelled.
 async function closeTab(index) {
   const tab = openTabs[index];
   if (tab && tab.isModified) {
-    setActiveTab(index);
     const choice = await window.api.confirmSave(getFileName(tab.filePath));
-    if (choice === 'cancel') return;
+    if (choice === 'cancel') return false;
     if (choice === 'save') {
       const result = await window.api.saveFile(tab.filePath, tab.content);
       if (result.error) {
-        statusLabel.textContent = t('status.saveError', { msg: result.error });
-        return;
+        flashStatus(t('status.saveError', { msg: result.error }));
+        return false;
       }
     }
   }
 
   openTabs.splice(index, 1);
+  const remaining = openTabs.length;
 
-  if (openTabs.length === 0) {
-    activeTabIndex = -1;
-  } else if (activeTabIndex >= openTabs.length) {
-    activeTabIndex = openTabs.length - 1;
-  } else if (index < activeTabIndex) {
-    activeTabIndex -= 1;
+  // Shift pane indices; mark a pane as orphaned (-2) when its tab was removed.
+  ['left', 'right'].forEach((side) => {
+    if (paneTab[side] === index) paneTab[side] = -2;
+    else if (paneTab[side] > index) paneTab[side] -= 1;
+  });
+
+  if (remaining === 0) {
+    paneTab.left = -1;
+    paneTab.right = -1;
+    splitActive = false;
+  } else {
+    // Closing the right tab collapses the split.
+    if (paneTab.right === -2) {
+      splitActive = false;
+      paneTab.right = -1;
+    }
+    // Closing the left tab promotes the right one, or falls back to a neighbour.
+    if (paneTab.left === -2) {
+      if (splitActive && paneTab.right >= 0) {
+        paneTab.left = paneTab.right;
+        paneTab.right = -1;
+        splitActive = false;
+      } else {
+        paneTab.left = Math.min(index, remaining - 1);
+      }
+    }
+    // A split needs two distinct, valid tabs.
+    if (splitActive && (paneTab.right < 0 || paneTab.right >= remaining || paneTab.right === paneTab.left)) {
+      splitActive = false;
+      paneTab.right = -1;
+    }
+    if (remaining < 2) {
+      splitActive = false;
+      paneTab.right = -1;
+    }
   }
 
-  renderTabBar();
-  refreshActiveView();
-  scheduleSessionSave();
+  if (!splitActive) focusedSide = 'left';
+  syncEverything();
+  return true;
 }
+
+// Close a set of tabs (given as tab objects). Indices are resolved fresh each
+// step, since closing one shifts the others. Stops if the user cancels.
+async function closeTabs(targets) {
+  for (const target of targets) {
+    const index = openTabs.indexOf(target);
+    if (index === -1) continue;
+    const closed = await closeTab(index);
+    if (!closed) break;
+  }
+}
+
+// --- Tab context menu (right-click on a tab) ------------------------------
+
+let tabMenuElement = null;
+
+// Remove the tab context menu if it is open.
+function closeTabMenu() {
+  if (tabMenuElement) {
+    tabMenuElement.remove();
+    tabMenuElement = null;
+  }
+}
+
+// Show the right-click menu for the tab at the given index.
+function openTabMenu(event, index) {
+  closeTabMenu();
+
+  const items = [
+    { label: t('tab.close'), targets: [openTabs[index]] },
+    { label: t('tab.closeOthers'), targets: openTabs.filter((_, i) => i !== index) },
+    { label: t('tab.closeRight'), targets: openTabs.filter((_, i) => i > index) },
+    { label: t('tab.closeLeft'), targets: openTabs.filter((_, i) => i < index) },
+    { label: t('tab.closeAll'), targets: openTabs.slice() }
+  ];
+
+  const menu = document.createElement('div');
+  menu.className = 'tab-menu';
+  menu.addEventListener('click', (clickEvent) => clickEvent.stopPropagation());
+
+  items.forEach((item) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = item.label;
+    button.disabled = item.targets.length === 0;
+    button.addEventListener('click', () => {
+      closeTabMenu();
+      closeTabs(item.targets);
+    });
+    menu.appendChild(button);
+  });
+
+  document.body.appendChild(menu);
+
+  // Keep the menu inside the viewport.
+  const menuRect = menu.getBoundingClientRect();
+  const margin = 6;
+  let left = event.clientX;
+  let top = event.clientY;
+  if (left + menuRect.width > window.innerWidth - margin) {
+    left = window.innerWidth - menuRect.width - margin;
+  }
+  if (top + menuRect.height > window.innerHeight - margin) {
+    top = window.innerHeight - menuRect.height - margin;
+  }
+  menu.style.left = Math.max(margin, left) + 'px';
+  menu.style.top = Math.max(margin, top) + 'px';
+
+  tabMenuElement = menu;
+}
+
+// Dismiss the menu on Escape or when the window scrolls/resizes.
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeTabMenu();
+});
+window.addEventListener('resize', closeTabMenu);
+
+// --- Session persistence --------------------------------------------------
 
 // Build a serialisable snapshot of the current session.
 function buildSessionSnapshot() {
   return {
     tabs: openTabs.map((tab) => ({ filePath: tab.filePath, content: tab.content })),
-    activeTabIndex: activeTabIndex
+    activeTabIndex: paneTab.left,
+    split: splitActive
+      ? { active: true, left: paneTab.left, right: paneTab.right, focused: focusedSide }
+      : { active: false }
   };
 }
 
@@ -223,19 +530,21 @@ function scheduleSessionSave() {
   }, 400);
 }
 
+// --- Undo / redo ----------------------------------------------------------
+
 // Maximum number of undo states kept per tab.
 const MAX_HISTORY = 100;
 
-// Enable or disable the undo/redo buttons for the active tab.
+// Enable or disable the undo/redo buttons for the focused tab.
 function updateUndoRedoButtons() {
   const tab = getActiveTab();
   undoButton.disabled = !tab || tab.historyIndex <= 0;
   redoButton.disabled = !tab || tab.historyIndex >= tab.history.length - 1;
 }
 
-// Record the current content of the active tab as a new undo state.
-function recordHistory() {
-  const tab = getActiveTab();
+// Record the current content of the given tab as a new undo state.
+function recordHistory(index) {
+  const tab = tabAt(index);
   if (!tab) return;
   if (tab.history[tab.historyIndex] === tab.content) return;
 
@@ -249,62 +558,69 @@ function recordHistory() {
     tab.historyIndex -= 1;
   }
 
-  updateUndoRedoButtons();
+  if (index === paneTab[focusedSide]) updateUndoRedoButtons();
 }
 
-// Record history after a short pause, so a burst of typing is one undo step.
-function scheduleHistory() {
-  if (historyTimer !== null) clearTimeout(historyTimer);
-  historyTimer = setTimeout(() => {
-    historyTimer = null;
-    recordHistory();
+// Record history for a pane after a short pause, so a burst of typing is one step.
+function scheduleHistory(side) {
+  if (historyTimers[side] !== null) clearTimeout(historyTimers[side]);
+  historyTimers[side] = setTimeout(() => {
+    historyTimers[side] = null;
+    recordHistory(paneTab[side]);
   }, 500);
 }
 
 // Make sure any pending edit is recorded before an undo/redo step.
-function flushHistory() {
-  if (historyTimer !== null) {
-    clearTimeout(historyTimer);
-    historyTimer = null;
-    recordHistory();
+function flushHistory(side) {
+  if (historyTimers[side] !== null) {
+    clearTimeout(historyTimers[side]);
+    historyTimers[side] = null;
+    recordHistory(paneTab[side]);
   }
 }
 
-// Apply the active tab content (after an undo/redo) to the editor and preview.
-function applyHistoryState() {
-  const tab = getActiveTab();
+// Apply the tab content (after an undo/redo) to a pane's editor and preview.
+function applyHistoryState(side) {
+  const tab = tabAt(paneTab[side]);
   if (!tab) return;
   tab.content = tab.history[tab.historyIndex];
   tab.isModified = true;
-  editor.value = tab.content;
-  renderPreview();
+  views[side].editor.value = tab.content;
+  views[side].preview.innerHTML = marked.parse(tab.content);
   renderTabBar();
-  updateUndoRedoButtons();
+  if (side === focusedSide) {
+    refreshStatus();
+    updateUndoRedoButtons();
+  }
   scheduleSessionSave();
 }
 
-// Undo: step back to the previous content state.
+// Undo: step back to the previous content state in the focused pane.
 function undo() {
-  const tab = getActiveTab();
+  const side = focusedSide;
+  const tab = tabAt(paneTab[side]);
   if (!tab) return;
-  flushHistory();
+  flushHistory(side);
   if (tab.historyIndex <= 0) return;
   tab.historyIndex -= 1;
-  applyHistoryState();
+  applyHistoryState(side);
 }
 
-// Redo: step forward to the next content state.
+// Redo: step forward to the next content state in the focused pane.
 function redo() {
-  const tab = getActiveTab();
+  const side = focusedSide;
+  const tab = tabAt(paneTab[side]);
   if (!tab) return;
-  flushHistory();
+  flushHistory(side);
   if (tab.historyIndex >= tab.history.length - 1) return;
   tab.historyIndex += 1;
-  applyHistoryState();
+  applyHistoryState(side);
 }
 
 undoButton.addEventListener('click', undo);
 redoButton.addEventListener('click', redo);
+
+// --- Session restore ------------------------------------------------------
 
 // Restore the previous session on startup.
 // Files that no longer exist are already filtered out by the main process.
@@ -321,46 +637,124 @@ async function restoreSession() {
     }));
 
     const restoredIndex = session.activeTabIndex;
-    activeTabIndex =
+    paneTab.left =
       typeof restoredIndex === 'number' && restoredIndex >= 0 && restoredIndex < openTabs.length
         ? restoredIndex
         : 0;
+
+    // Restore the split layout only when it is still consistent.
+    const split = session.split;
+    if (
+      split &&
+      split.active &&
+      Number.isInteger(split.left) &&
+      Number.isInteger(split.right) &&
+      split.left >= 0 &&
+      split.left < openTabs.length &&
+      split.right >= 0 &&
+      split.right < openTabs.length &&
+      split.left !== split.right
+    ) {
+      paneTab.left = split.left;
+      paneTab.right = split.right;
+      splitActive = true;
+      focusedSide = split.focused === 'right' ? 'right' : 'left';
+    }
   }
 
-  renderTabBar();
-  refreshActiveView();
+  syncEverything();
 }
 
-// Live editing of the source textarea: store the text and refresh the preview.
-editor.addEventListener('input', () => {
-  const tab = getActiveTab();
+// --- Live editing ---------------------------------------------------------
+
+// Source textarea edited: store the text and refresh that pane's preview.
+function onEditorInput(side) {
+  const tab = tabAt(paneTab[side]);
   if (!tab) return;
 
-  tab.content = editor.value;
+  tab.content = views[side].editor.value;
   tab.isModified = true;
+  views[side].preview.innerHTML = marked.parse(tab.content);
   renderTabBar();
-  renderPreview();
+  if (side === focusedSide) refreshStatus();
   scheduleSessionSave();
-  scheduleHistory();
-});
+  scheduleHistory(side);
+}
 
-// Live editing of the rendered preview: convert its HTML back to Markdown and
-// store it in the active tab. The preview is intentionally not re-rendered here,
-// so the caret position is preserved while typing.
-function syncMarkdownFromPreview() {
-  const tab = getActiveTab();
+// Rendered preview edited: convert its HTML back to Markdown and store it.
+// The preview is intentionally not re-rendered here, so the caret is preserved.
+function onPreviewInput(side) {
+  const tab = tabAt(paneTab[side]);
   if (!tab) return;
 
-  const markdown = turndownService.turndown(preview.innerHTML);
+  const markdown = turndownService.turndown(views[side].preview.innerHTML);
   tab.content = markdown;
   tab.isModified = true;
-  editor.value = markdown;
+  views[side].editor.value = markdown;
   renderTabBar();
+  if (side === focusedSide) refreshStatus();
   scheduleSessionSave();
-  scheduleHistory();
+  scheduleHistory(side);
 }
 
-preview.addEventListener('input', syncMarkdownFromPreview);
+// Wire up input and focus handlers for both panes.
+Object.keys(views).forEach((side) => {
+  const view = views[side];
+  view.editor.addEventListener('input', () => onEditorInput(side));
+  view.preview.addEventListener('input', () => onPreviewInput(side));
+
+  // Clicking/typing into a pane makes it the focused one while split.
+  view.root.addEventListener('focusin', () => {
+    if (splitActive && focusedSide !== side) {
+      focusedSide = side;
+      updateLayout();
+      renderTabBar();
+      refreshStatus();
+      updateUndoRedoButtons();
+    }
+  });
+});
+
+// --- Drag and drop of tabs onto the workspace -----------------------------
+
+// Decide which half of the workspace the pointer is over.
+function sideFromEvent(event) {
+  const rect = workspace.getBoundingClientRect();
+  return event.clientX < rect.left + rect.width / 2 ? 'left' : 'right';
+}
+
+function showDropIndicator(side) {
+  dropIndicator.classList.remove('hidden', 'left', 'right');
+  dropIndicator.classList.add(side);
+}
+
+function hideDropIndicator() {
+  dropIndicator.classList.add('hidden');
+}
+
+workspace.addEventListener('dragover', (event) => {
+  if (draggedTabIndex < 0) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  showDropIndicator(sideFromEvent(event));
+});
+
+workspace.addEventListener('dragleave', (event) => {
+  // Hide only when the pointer actually leaves the workspace.
+  if (!workspace.contains(event.relatedTarget)) hideDropIndicator();
+});
+
+workspace.addEventListener('drop', (event) => {
+  if (draggedTabIndex < 0) return;
+  event.preventDefault();
+  const side = sideFromEvent(event);
+  const index = draggedTabIndex;
+  draggedTabIndex = -1;
+  hideDropIndicator();
+  dropTab(side, index);
+});
+
+// --- Formatting on the focused preview ------------------------------------
 
 // Wrap the current selection inside the preview in an inline <code> element.
 function wrapSelectionInCode() {
@@ -373,10 +767,10 @@ function wrapSelectionInCode() {
   range.insertNode(codeElement);
 }
 
-// Apply a formatting command to the rendered (editable) preview, then sync.
+// Apply a formatting command to the focused (editable) preview, then sync.
 function applyFormat(command) {
   if (!getActiveTab()) return;
-  preview.focus();
+  focusedPreview().focus();
 
   switch (command) {
     case 'h1': document.execCommand('formatBlock', false, 'H1'); break;
@@ -393,7 +787,7 @@ function applyFormat(command) {
     default: return;
   }
 
-  syncMarkdownFromPreview();
+  onPreviewInput(focusedSide);
   updateActiveFormats();
 }
 
@@ -404,7 +798,7 @@ function pathToFileUrl(filePath) {
   return 'file://' + encodeURI(normalizedPath);
 }
 
-// Let the user pick a media file and insert it into the rendered preview.
+// Let the user pick a media file and insert it into the focused preview.
 async function insertMedia(mediaType) {
   if (!getActiveTab()) return;
 
@@ -414,7 +808,7 @@ async function insertMedia(mediaType) {
   const fileUrl = pathToFileUrl(filePath);
   const fileName = getFileName(filePath);
 
-  preview.focus();
+  focusedPreview().focus();
   if (mediaType === 'video') {
     document.execCommand('insertHTML', false, '<video controls src="' + fileUrl + '"></video>');
   } else {
@@ -422,7 +816,7 @@ async function insertMedia(mediaType) {
     document.execCommand('insertHTML', false, '<img src="' + fileUrl + '" alt="' + fileName + '">');
   }
 
-  syncMarkdownFromPreview();
+  onPreviewInput(focusedSide);
 }
 
 // Handle clicks on the formatting and media control buttons.
@@ -442,6 +836,8 @@ formatToggle.addEventListener('click', () => {
   formatBar.classList.toggle('collapsed');
 });
 
+// --- Active-format highlighting -------------------------------------------
+
 // Return true when the current selection is inside the given container.
 function isSelectionInside(container) {
   const selection = window.getSelection();
@@ -455,14 +851,28 @@ function isSelectionInside(container) {
   return false;
 }
 
+// Return which pane's preview holds the current selection, or null.
+function previewSideForSelection() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  let node = selection.anchorNode;
+  while (node) {
+    if (node === views.left.preview) return 'left';
+    if (node === views.right.preview) return 'right';
+    node = node.parentNode;
+  }
+  return null;
+}
+
 // Return true when the selection has an ancestor element with the given tag,
-// stopping at the preview root.
-function selectionHasAncestorTag(tagName) {
+// stopping at the given preview root.
+function selectionHasAncestorTag(tagName, root) {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return false;
 
   let node = selection.anchorNode;
-  while (node && node !== preview) {
+  while (node && node !== root) {
     if (node.nodeType === Node.ELEMENT_NODE && node.tagName === tagName) return true;
     node = node.parentNode;
   }
@@ -477,19 +887,21 @@ function setControlActive(command, isActive) {
 
 // Highlight the controls matching the formatting of the current selection.
 function updateActiveFormats() {
-  if (!isSelectionInside(preview)) return;
+  const side = previewSideForSelection();
+  if (!side) return;
+  const root = views[side].preview;
 
-  const isHeading1 = selectionHasAncestorTag('H1');
-  const isHeading2 = selectionHasAncestorTag('H2');
-  const isHeading3 = selectionHasAncestorTag('H3');
-  const isQuote = selectionHasAncestorTag('BLOCKQUOTE');
+  const isHeading1 = selectionHasAncestorTag('H1', root);
+  const isHeading2 = selectionHasAncestorTag('H2', root);
+  const isHeading3 = selectionHasAncestorTag('H3', root);
+  const isQuote = selectionHasAncestorTag('BLOCKQUOTE', root);
 
   setControlActive('h1', isHeading1);
   setControlActive('h2', isHeading2);
   setControlActive('h3', isHeading3);
   setControlActive('quote', isQuote);
-  setControlActive('code', selectionHasAncestorTag('CODE'));
-  setControlActive('link', selectionHasAncestorTag('A'));
+  setControlActive('code', selectionHasAncestorTag('CODE', root));
+  setControlActive('link', selectionHasAncestorTag('A', root));
 
   // Plain paragraph is active only when no block-level tag applies.
   setControlActive('paragraph', !(isHeading1 || isHeading2 || isHeading3 || isQuote));
@@ -502,6 +914,8 @@ function updateActiveFormats() {
 
 // Refresh the highlighted controls whenever the selection changes.
 document.addEventListener('selectionchange', updateActiveFormats);
+
+// --- Help and language menus ----------------------------------------------
 
 // Open or close the help dropdown.
 helpToggle.addEventListener('click', (event) => {
@@ -534,11 +948,12 @@ window.api.onUpdateAvailable((info) => {
   }
 });
 
-// Close the dropdowns when clicking anywhere else.
+// Close the dropdowns and the tab menu when clicking anywhere else.
 document.addEventListener('click', () => {
   helpDropdown.classList.add('hidden');
   emojiPicker.classList.add('hidden');
   langDropdown.classList.add('hidden');
+  closeTabMenu();
 });
 
 // Open or close the language dropdown (showing the current language code).
@@ -553,6 +968,14 @@ langDropdown.addEventListener('click', (event) => {
   event.stopPropagation();
 });
 
+// Toggle the split view from the toolbar button.
+splitButton.addEventListener('click', (event) => {
+  event.stopPropagation();
+  toggleSplit();
+});
+
+// --- Emoji picker ---------------------------------------------------------
+
 // Emoji available in the "Icon" picker.
 const EMOJIS = [
   '😀', '😄', '😁', '😆', '😅', '😂', '🙂', '😉',
@@ -563,12 +986,12 @@ const EMOJIS = [
   '🚀', '🎯', '🎉', '🐛', '💻', '⚙️', '🔧', '📝'
 ];
 
-// Insert an emoji at the current caret position in the preview.
+// Insert an emoji at the current caret position in the focused preview.
 function insertEmoji(emoji) {
   if (!getActiveTab()) return;
-  preview.focus();
+  focusedPreview().focus();
   document.execCommand('insertText', false, emoji);
-  syncMarkdownFromPreview();
+  onPreviewInput(focusedSide);
 }
 
 // Build the emoji grid once at startup.
@@ -631,13 +1054,15 @@ emojiPicker.addEventListener('click', (event) => {
   event.stopPropagation();
 });
 
+// --- File actions ---------------------------------------------------------
+
 // Open: show the system file dialog and open every selected file in a tab.
 openButton.addEventListener('click', async () => {
   const files = await window.api.openFile();
   files.forEach((file) => openTab(file.filePath, file.content));
 });
 
-// Save: overwrite the original file of the active tab.
+// Save: overwrite the original file of the focused tab.
 saveButton.addEventListener('click', async () => {
   const tab = getActiveTab();
   if (!tab) {
@@ -662,7 +1087,7 @@ printButton.addEventListener('click', () => {
   window.api.print();
 });
 
-// Export the current preview to a PDF file.
+// Export the focused preview to a PDF file.
 exportButton.addEventListener('click', async () => {
   const tab = getActiveTab();
   if (!tab) {
@@ -670,7 +1095,7 @@ exportButton.addEventListener('click', async () => {
     return;
   }
 
-  // Suggest a PDF name based on the active file name.
+  // Suggest a PDF name based on the focused file name.
   const suggestedName = getFileName(tab.filePath).replace(/\.(md|markdown|txt)$/i, '') + '.pdf';
 
   const result = await window.api.exportPdf(suggestedName);
@@ -695,7 +1120,7 @@ window.api.onAppCloseRequest(async () => {
     const tab = openTabs[i];
     if (!tab.isModified) continue;
 
-    setActiveTab(i);
+    showTab(focusedSide, i);
     const choice = await window.api.confirmSave(getFileName(tab.filePath));
     if (choice === 'cancel') return; // abort closing
     if (choice === 'save') {
@@ -715,6 +1140,8 @@ window.api.onAppCloseRequest(async () => {
 window.api.onOpenExternalFile((file) => {
   openTab(file.filePath, file.content);
 });
+
+// --- Language menu --------------------------------------------------------
 
 // Supported locales, kept to rebuild the language menu after a change.
 let availableLocales = [];
@@ -742,7 +1169,8 @@ async function changeLanguage(locale) {
 
   applyTranslations();
   buildLanguageMenu(availableLocales, data.locale);
-  refreshActiveView();
+  renderTabBar();
+  refreshStatus();
 
   // Re-translate the update menu item if it is currently shown.
   if (pendingUpdateInfo) {

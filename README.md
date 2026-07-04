@@ -24,6 +24,8 @@ Write in Markdown, see the result instantly, and export to PDF. No clutter, no d
 - **Editable preview (WYSIWYG)** — edit the rendered document directly; changes are converted back to clean Markdown.
 - **Formatting toolbar** — headings (H1–H3), bold, italic, lists, quotes, inline code, links, images, videos and emojis — all one click away.
 - **Multi-tab** — open and work on several files at once, one tab per document.
+- **Split view** — drag a tab to the left or right edge (or use the split button) to view and edit two documents side by side.
+- **Tab context menu** — right-click a tab to close others, close tabs to the right or left, or close them all.
 - **Save, Undo / Redo & Revert** — full control over your edits, with unsaved-changes protection on close.
 - **Print & Export to PDF** — turn any document into a clean, print-ready PDF.
 - **Media insertion** — quickly embed images, videos and emojis.
@@ -106,6 +108,7 @@ The output is generated in the `dist/` folder.
 3. Use the **formatting toolbar** or write Markdown by hand — both stay in sync.
 4. **Save** to write back to the original file, or **Export to PDF** to share it.
 5. Open multiple files: each one gets its own **tab**.
+6. **Work side by side**: drag a tab to the left or right edge (or click the split button next to the language menu) to open two documents at once. Right-click a tab for quick close actions.
 
 ---
 
