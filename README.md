@@ -32,7 +32,7 @@ Write in Markdown, see the result instantly, and export to PDF. No clutter, no d
 - **File associations** — open `.md`, `.markdown` and `.txt` files straight from your file manager ("Open with").
 - **Session restore** — reopens the files you had open last time.
 - **11 languages** — automatic system-language detection with a manual switcher.
-- **Update notifications** — get notified inside the app when a new version is available.
+- **Update notifications** — a popup lets you know as soon as a new version is available, with a one-click link to download it.
 - **Cross-platform** — native builds for Windows, macOS and Linux.
 
 ---
