@@ -64,6 +64,13 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
+  // The app is a single page: never let a link navigate the window away from it
+  // or spawn a popup. Link clicks are handled explicitly in the renderer.
+  mainWindow.webContents.on('will-navigate', (event) => {
+    event.preventDefault();
+  });
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   // Intercept window close: let the renderer handle unsaved changes first.
   mainWindow.on('close', (event) => {
     if (allowClose) return;
@@ -257,6 +264,66 @@ ipcMain.handle('read-file', async (event, filePath) => {
   } catch (error) {
     return { error: error.message };
   }
+});
+
+// File extensions that the editor can open in a tab.
+const TEXT_EXTENSIONS = ['.md', '.markdown', '.txt'];
+
+// Follow a link pointing at a local file, resolved against the document that
+// contains it. Markdown/text files are returned to be opened in a tab; any
+// other file is handed to the system default application.
+ipcMain.handle('open-linked-file', async (event, { basePath, href }) => {
+  try {
+    // Drop any anchor/query part and decode %20 and friends.
+    const cleaned = decodeURI(href.split('#')[0].split('?')[0]);
+    if (!cleaned) return { error: 'empty' };
+
+    const resolved = path.isAbsolute(cleaned)
+      ? path.normalize(cleaned)
+      : path.resolve(path.dirname(basePath), cleaned);
+
+    if (!fs.existsSync(resolved)) return { notFound: true, filePath: resolved };
+
+    if (!TEXT_EXTENSIONS.includes(path.extname(resolved).toLowerCase())) {
+      // Not a document we can edit: let the OS open it.
+      const failure = await shell.openPath(resolved);
+      return failure ? { error: failure } : { openedExternally: true, filePath: resolved };
+    }
+
+    return { filePath: resolved, content: fs.readFileSync(resolved, 'utf-8') };
+  } catch (error) {
+    return { error: error.message };
+  }
+});
+
+// Warn before leaving the app, then open an external URL in the system browser.
+ipcMain.handle('open-external-url', async (event, url) => {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (error) {
+    return { error: 'invalid-url' };
+  }
+
+  // Only ever hand well-known, safe schemes to the OS.
+  if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+    return { error: 'unsupported-scheme' };
+  }
+
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: i18n.t('dialog.openLink.title'),
+    message: i18n.t('dialog.openLink.message'),
+    detail: i18n.t('dialog.openLink.detail', { url }),
+    buttons: [i18n.t('dialog.button.open'), i18n.t('dialog.button.cancel')],
+    defaultId: 0,
+    cancelId: 1
+  });
+
+  if (response !== 0) return { opened: false };
+
+  await shell.openExternal(url);
+  return { opened: true };
 });
 
 // Save (overwrite) the original Markdown file.

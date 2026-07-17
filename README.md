@@ -28,6 +28,7 @@ Write in Markdown, see the result instantly, and export to PDF. No clutter, no d
 - **Tab context menu** — right-click a tab to close others, close tabs to the right or left, or close them all.
 - **Save, Undo / Redo & Revert** — full control over your edits, with unsaved-changes protection on close.
 - **Print & Export to PDF** — turn any document into a clean, print-ready PDF.
+- **Clickable links** — click a link to another Markdown file to open it in a tab; external pages ask for confirmation before opening in your browser.
 - **Media insertion** — quickly embed images, videos and emojis.
 - **File associations** — open `.md`, `.markdown` and `.txt` files straight from your file manager ("Open with").
 - **Session restore** — reopens the files you had open last time.

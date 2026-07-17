@@ -697,11 +697,90 @@ function onPreviewInput(side) {
   scheduleHistory(side);
 }
 
-// Wire up input and focus handlers for both panes.
+// --- Following links in the preview ---------------------------------------
+
+// Turn a heading into the anchor slug Markdown links normally use.
+function slugify(text) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-');
+}
+
+// Scroll to an in-document anchor, matching by id or by heading text.
+function scrollToAnchor(previewElement, anchor) {
+  const id = decodeURIComponent(anchor.slice(1));
+  if (!id) return;
+
+  let target = previewElement.querySelector('[id="' + CSS.escape(id) + '"]');
+  if (!target) {
+    const headings = previewElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    target = Array.from(headings).find((h) => slugify(h.textContent) === slugify(id));
+  }
+
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  else flashStatus(t('status.anchorNotFound', { anchor: id }));
+}
+
+// Handle a click on a link inside a preview: follow local documents, warn
+// before opening external pages, and scroll for in-document anchors.
+async function onPreviewLinkClick(event, side) {
+  const link = event.target.closest('a');
+  if (!link || !views[side].preview.contains(link)) return;
+
+  const href = link.getAttribute('href');
+  if (!href) return;
+
+  // Never let the click navigate the window itself.
+  event.preventDefault();
+
+  if (href.startsWith('#')) {
+    scrollToAnchor(views[side].preview, href);
+    return;
+  }
+
+  // External pages and mail links go through the confirmation dialog.
+  if (/^(https?:|mailto:)/i.test(href)) {
+    await window.api.openExternalUrl(href);
+    return;
+  }
+
+  const tab = tabAt(paneTab[side]);
+  if (!tab) return;
+
+  const result = await window.api.openLinkedFile(tab.filePath, href);
+
+  if (result.notFound) {
+    flashStatus(t('status.linkNotFound', { path: result.filePath }));
+  } else if (result.error) {
+    flashStatus(t('status.linkError', { msg: result.error }));
+  } else if (result.filePath && result.content !== undefined) {
+    showTab(side, ensureTabFor(result.filePath, result.content));
+  }
+}
+
+// Return the index of the tab for a file, opening it when not already open.
+function ensureTabFor(filePath, content) {
+  const existing = findTabByPath(filePath);
+  if (existing !== -1) return existing;
+
+  openTabs.push({
+    filePath,
+    content,
+    isModified: false,
+    history: [content],
+    historyIndex: 0
+  });
+  return openTabs.length - 1;
+}
+
+// Wire up input, focus and link handlers for both panes.
 Object.keys(views).forEach((side) => {
   const view = views[side];
   view.editor.addEventListener('input', () => onEditorInput(side));
   view.preview.addEventListener('input', () => onPreviewInput(side));
+  view.preview.addEventListener('click', (event) => onPreviewLinkClick(event, side));
 
   // Clicking/typing into a pane makes it the focused one while split.
   view.root.addEventListener('focusin', () => {

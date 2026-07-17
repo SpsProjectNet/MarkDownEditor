@@ -4,6 +4,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   openFile: () => ipcRenderer.invoke('open-file'),
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
+  openLinkedFile: (basePath, href) =>
+    ipcRenderer.invoke('open-linked-file', { basePath, href }),
+  openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
   saveFile: (filePath, content) => ipcRenderer.invoke('save-file', { filePath, content }),
   print: () => ipcRenderer.invoke('print'),
   exportPdf: (suggestedName) => ipcRenderer.invoke('export-pdf', suggestedName),
