@@ -556,9 +556,57 @@ body.show-source .editor-pane {
 
 /* Printing shows only the focused view's preview */
 @media print {
+  /* The screen layout is a viewport-sized flex column with scrolling panes.
+     Those fixed heights and overflows must be undone here, otherwise the
+     export only contains what was visible and the rest is cut off. */
+  html, body {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
   .tab-bar, .format-bar, .statusbar, .editor-pane { display: none !important; }
+
+  .workspace {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
   .doc-view { display: none !important; }
-  .doc-view.focused { display: flex !important; box-shadow: none; }
-  .split { display: block; }
-  .preview-pane { overflow: visible; }
+  .doc-view.focused {
+    display: block !important;
+    height: auto;
+    overflow: visible;
+    border-left: none;
+    box-shadow: none;
+  }
+
+  .split,
+  .pane,
+  .preview-pane {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  .preview {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  /* Keep blocks and their headings together across page breaks. */
+  .preview pre,
+  .preview blockquote,
+  .preview table,
+  .preview img {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .preview h1, .preview h2, .preview h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
 }
